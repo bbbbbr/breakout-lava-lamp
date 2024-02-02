@@ -33,13 +33,20 @@ const uint8_t player_colors[PLAYER_COUNT_MAX] = {
 // ====== PLAYERS ======
 
 
+// Player corner calculations (Sprite is 8 pixels wide, so from Center: Left/Top = -4, Right/Bottom = +3)
+#define PLAYER_LEFT(px)   ((px - ((SPRITE_WIDTH  / 2)    )) / BOARD_GRID_SZ)
+#define PLAYER_RIGHT(px)  ((px + ((SPRITE_WIDTH  / 2) - 1)) / BOARD_GRID_SZ)
+#define PLAYER_TOP(py)    ((py - ((SPRITE_HEIGHT / 2)    )) / BOARD_GRID_SZ)
+#define PLAYER_BOTTOM(py) ((py + ((SPRITE_HEIGHT / 2) - 1)) / BOARD_GRID_SZ)
+
+
 static void players_redraw_sprites(void) {
     for (uint8_t c = 0; c < gameinfo.player_count; c++) {
-//        if (c == 0)
         move_sprite(c, gameinfo.players[c].x.h + SPR_OFFSET_X,
                        gameinfo.players[c].y.h + SPR_OFFSET_Y);
-// if (c == 0)
-    // EMU_printf("x=%d, y=%d", gameinfo.players[c].x.h + SPR_OFFSET_X, gameinfo.players[c].y.h + SPR_OFFSET_Y);
+        #ifdef DEBUG_ENABLED
+                EMU_printf("- Redraw: player=%d : x=%d, y=%d", (uint16_t)c, (uint16_t)gameinfo.players[c].x.h, (uint16_t)gameinfo.players[c].y.h);
+        #endif
     }
 }
 
@@ -52,102 +59,70 @@ static void player_update_direction(uint8_t idx) {
 }
 
 
-// TODO: make a board redraw queue for end of frame instead of redraws inline
 
-// TODO: Still buggy with edge overflow checks
-// TODO: simplify to array of offsets and L/Rvs U/D and a helper function
+// Check to see if a given board tile does not match the player (collision) or matches (no collision)
+static bool board_check_xy(uint8_t x, uint8_t y, uint8_t board_player_col) {
+    bool collision = false;
 
-static bool player_check_board_collisions(uint8_t player_id) {
-        // TODO: Optimize: If going left, just check left edge ?
-        bool movement_recalc_queued = false;
-        bool bounce_x = false;
-        bool bounce_y = false;
-
-        player_t * p_player = &(gameinfo.players[player_id]);
-
-        uint8_t board_player_col = board_player_colors[player_id];
-
-        // uint8_t px       = (p_player->x.w + p_player->speed_x) >> 8;
-        uint8_t px       = p_player->x.h;
-        uint8_t x_mid    = px / BOARD_GRID_SZ;
-        uint8_t x_left   = (px - (SPRITE_WIDTH  / 2)) / BOARD_GRID_SZ;
-        uint8_t x_right  = (px + (SPRITE_WIDTH  / 2)) / BOARD_GRID_SZ;
-
-        // uint8_t py       = (p_player->y.w + p_player->speed_y) >> 8;
-        uint8_t py       = p_player->y.h;
-        uint8_t y_mid    = py / BOARD_GRID_SZ;
-        uint8_t y_top    = (py - (SPRITE_HEIGHT / 2)) / BOARD_GRID_SZ;
-        uint8_t y_bottom = (py + (SPRITE_HEIGHT / 2)) / BOARD_GRID_SZ;
-
-        uint16_t board_check_xy;
-
-        uint8_t test_x;
-        uint8_t test_y;
-
-        // ================ Test X
-
-        if (p_player->speed_x > 0)
-            test_x = x_right;
-        else
-            test_x = x_left;
-
-        test_y = y_top;
-        board_check_xy = test_x + (test_y * BOARD_W);
-if (board_check_xy > BOARD_W * BOARD_H)
-EMU_printf("OFLOW-X-TOP px=%d, py=%d, tx=%d, ty=%d, checkxy=%d", (int16_t)px, (int16_t)py, (int16_t)test_x, (int16_t)test_y, (int16_t)board_check_xy);
-        //EMU_printf("px=%d, py=%d, tx=%d, ty=%d, checkxy=%d", (int16_t)px, (int16_t)py, (int16_t)test_x, (int16_t)test_y, (int16_t)board_check_xy);
-        if (gameinfo.board[board_check_xy] != board_player_col) {
-            // Update board
-            gameinfo.board[board_check_xy] = board_player_col;
-            set_bkg_tile_xy(test_x, test_y, board_player_col);
-            bounce_x = true;
-        }
-
-        test_y = y_bottom;
-        board_check_xy = test_x + (test_y * BOARD_W);
-if (board_check_xy > BOARD_W * BOARD_H)
-EMU_printf("OFLOW-X-BOTTOM px=%d, py=%d, tx=%d, ty=%d, checkxy=%d", (int16_t)px, (int16_t)py, (int16_t)test_x, (int16_t)test_y, (int16_t)board_check_xy);
-        if (gameinfo.board[board_check_xy] != board_player_col) {
-            // Update board
-            gameinfo.board[board_check_xy] = board_player_col;
-            set_bkg_tile_xy(test_x, test_y, board_player_col);
-            bounce_x = true;
-        }
-
-        if (bounce_x) {
-            p_player->angle = (uint8_t)(ANGLE_TO_8BIT(360) - p_player->angle);
-            movement_recalc_queued = true;
-        }
-
-
-    // ================ Test Y
-
-    if (p_player->speed_y > 0)
-        test_y = y_bottom;
-    else
-        test_y = y_top;
-
-    test_x = x_left;
-    board_check_xy = test_x + (test_y * BOARD_W);
-if (board_check_xy > BOARD_W * BOARD_H)
-EMU_printf("OFLOW-Y-LEFT px=%d, py=%d, tx=%d, ty=%d, checkxy=%d", (int16_t)px, (int16_t)py, (int16_t)test_x, (int16_t)test_y, (int16_t)board_check_xy);
-    //EMU_printf("px=%d, py=%d, tx=%d, ty=%d, checkxy=%d", (int16_t)px, (int16_t)py, (int16_t)test_x, (int16_t)test_y, (int16_t)board_check_xy);
-    if (gameinfo.board[board_check_xy] != board_player_col) {
-        // Update board
-        gameinfo.board[board_check_xy] = board_player_col;
-        set_bkg_tile_xy(test_x, test_y, board_player_col);
-        bounce_y = true;
+    // This is a wall collision, so no tile updates
+    if ((x > BOARD_W) || (y > BOARD_H)) {
+        #ifdef DEBUG_ENABLED
+         EMU_printf("  check px=%d, py=%d : collision = WALL", (int16_t)x, (int16_t)y);
+        #endif
+        return true;
     }
 
-    test_x = x_right;
-    board_check_xy = test_x + (test_y * BOARD_W);
-if (board_check_xy > BOARD_W * BOARD_H)
-EMU_printf("OFLOW-Y-RIGHT px=%d, py=%d, tx=%d, ty=%d, checkxy=%d", (int16_t)px, (int16_t)py, (int16_t)test_x, (int16_t)test_y, (int16_t)board_check_xy);
-    if (gameinfo.board[board_check_xy] != board_player_col) {
+    uint16_t board_index = x + (y * BOARD_W);
+    if (gameinfo.board[board_index] != board_player_col) {
         // Update board
-        gameinfo.board[board_check_xy] = board_player_col;
-        set_bkg_tile_xy(test_x, test_y, board_player_col);
-        bounce_y = true;
+        // TODO: queue a tile draw instead of handling immediately
+        gameinfo.board[board_index] = board_player_col;
+        set_bkg_tile_xy(x, y, board_player_col);
+        collision = true;
+    }
+
+    #ifdef DEBUG_ENABLED
+        EMU_printf("  check px=%d, py=%d : checkxy=%d = collision=%d", (int16_t)x, (int16_t)y, (int16_t)board_index, (int16_t)collision);
+    #endif
+
+    return collision;
+}
+
+
+static bool player_check_board_collisions(uint8_t player_id) {
+    bool movement_recalc_queued = false;
+    bool bounce_x = false;
+    bool bounce_y = false;
+
+    player_t * p_player = &(gameinfo.players[player_id]);
+
+    uint8_t board_player_col = board_player_colors[player_id];
+    uint8_t px       = p_player->x.h;
+    uint8_t py       = p_player->y.h;
+
+    #ifdef DEBUG_ENABLED
+        EMU_printf("* Collide check %d: player=%d : x=%d, y=%d", (uint16_t)player_id, (uint16_t)px, (uint16_t)py);
+    #endif
+    // Check Horizontal movement
+    // Test separately here since collision check also updates board tile color
+    if (p_player->speed_x != 0) {
+        uint8_t test_x = (p_player->speed_x > 0) ? PLAYER_RIGHT(px) : PLAYER_LEFT(px);
+        if (board_check_xy(test_x, PLAYER_TOP(py),    board_player_col)) bounce_x = true;
+        if (board_check_xy(test_x, PLAYER_BOTTOM(py), board_player_col)) bounce_x = true;
+    }
+
+    // Check Vertical movement
+    // Test separately here since collision check also updates board tile color
+    if (p_player->speed_y != 0) {
+        uint8_t test_y = (p_player->speed_y > 0) ? PLAYER_BOTTOM(py) : PLAYER_TOP(py);
+        if (board_check_xy(PLAYER_LEFT(px),  test_y, board_player_col)) bounce_y = true;
+        if (board_check_xy(PLAYER_RIGHT(px), test_y, board_player_col)) bounce_y = true;
+    }
+
+    // If there was a collision then calculate bounce angle
+    if (bounce_x) {
+        p_player->angle = (uint8_t)(ANGLE_TO_8BIT(360) - p_player->angle);
+        movement_recalc_queued = true;
     }
 
     if (bounce_y) {
@@ -172,14 +147,12 @@ static bool player_check_wall_collisions(uint8_t player_id) {
     // X (horizontal)
     if ( ((p_player->x.w + p_player->speed_x) < PLAYER_MIN_X_U16) ||
          ((p_player->x.w + p_player->speed_x) > PLAYER_MAX_X_U16) ) {
-        // p_player->speed_x *= -1;  // Simple version
         p_player->angle = (uint8_t)(ANGLE_TO_8BIT(360) - p_player->angle);
         movement_recalc_queued = true;
     }
     // Y (vertical)
     if ( ((p_player->y.w + p_player->speed_y) < PLAYER_MIN_Y_U16) ||
          ((p_player->y.w + p_player->speed_y) > PLAYER_MAX_Y_U16) ) {
-        // p_player->speed_y *= -1;  // Simple version
         p_player->angle = (uint8_t)(ANGLE_TO_8BIT(180) - p_player->angle);
 
         movement_recalc_queued = true;
@@ -199,6 +172,9 @@ static void players_update(void) {
     for (uint8_t c = 0; c < gameinfo.player_count; c++) {
         movement_recalc_queued = false;
 
+        // Apply the new delta movement
+
+
         if (player_check_wall_collisions(c))
             movement_recalc_queued = true;
 
@@ -210,12 +186,8 @@ static void players_update(void) {
 
         if (movement_recalc_queued == true) {
 
-            // If there was a collision slightly perturb the player angle, but not often
-            // if ((rand() & 0x0Fu) == 0x00) {
-                // Angle will be one of: -1,0,1
-                p_player->angle = (uint8_t)(p_player->angle + (int8_t)(rand() & 0x03u) - 1);
-            // }
-
+            // Slightly perturb the player angle if there was a collision
+            p_player->angle = (uint8_t)(p_player->angle + (int8_t)(rand() & 0x03u) - 1);
             player_update_direction(c);
         }
 

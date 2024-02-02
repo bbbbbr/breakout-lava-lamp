@@ -1,6 +1,8 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+// #define DEBUG_ENABLED
+
 #include "gameboard.h"
 
 #define ARRAY_LEN(A)  sizeof(A) / sizeof(A[0])
