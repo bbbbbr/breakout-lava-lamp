@@ -1,6 +1,9 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#include <stdint.h>
+#include <stdbool.h>
+
 // #define DEBUG_ENABLED
 
 #include "gameboard.h"
@@ -16,9 +19,13 @@
 typedef struct player_t {
     fixed x;
     fixed y;
+    fixed next_x;
+    fixed next_y;
     int16_t speed_x;
     int16_t speed_y;
     uint8_t angle;
+    bool bounce_x;
+    bool bounce_y;
 } player_t;
 
 

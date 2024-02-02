@@ -5,7 +5,10 @@
 #define BOARD_H (DEVICE_SCREEN_HEIGHT)  // In Tiles
 
  // Player position is in Fixed 8.8, speed is signed 8 bit
-#define PLAYER_SPEED_DEFAULT 2
+// Should be <= than 16
+#define PLAYER_SPEED_DEFAULT 4
+#define PLAYER_SPEED_MIN     1
+#define PLAYER_SPEED_MAX     8
 
 #define BOARD_GRID_SZ 8u
 

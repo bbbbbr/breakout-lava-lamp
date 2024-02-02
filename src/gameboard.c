@@ -1,8 +1,6 @@
 #include <gbdk/platform.h>
 #include <gbdk/metasprites.h>
 #include <gbdk/emu_debug.h>
-#include <stdint.h>
-#include <stdbool.h>
 #include <rand.h>
 
 #include "common.h"
@@ -45,37 +43,44 @@ static void players_redraw_sprites(void) {
         move_sprite(c, gameinfo.players[c].x.h + SPR_OFFSET_X,
                        gameinfo.players[c].y.h + SPR_OFFSET_Y);
         #ifdef DEBUG_ENABLED
-                EMU_printf("- Redraw: player=%d : x=%d, y=%d", (uint16_t)c, (uint16_t)gameinfo.players[c].x.h, (uint16_t)gameinfo.players[c].y.h);
+            EMU_printf("- Redraw: player=%d : x=%d, y=%d", (uint16_t)c, (uint16_t)gameinfo.players[c].x.h, (uint16_t)gameinfo.players[c].y.h);
         #endif
     }
 }
+
 
 static void player_update_direction(uint8_t idx) {
     uint8_t t_angle = gameinfo.players[idx].angle;
 
     gameinfo.players[idx].speed_x = (int16_t)SIN(t_angle) * PLAYER_SPEED_DEFAULT;
-    // Need to flip Y direction since adding positive values moves further down the screen
+    // Flip Y direction since adding positive values moves further down the screen
     gameinfo.players[idx].speed_y = (int16_t)COS(t_angle) * PLAYER_SPEED_DEFAULT * -1;
 }
 
 
-
 // Check to see if a given board tile does not match the player (collision) or matches (no collision)
+// TODO: could inline to improve performance
 static bool board_check_xy(uint8_t x, uint8_t y, uint8_t board_player_col) {
     bool collision = false;
 
     // This is a wall collision, so no tile updates
-    if ((x > BOARD_W) || (y > BOARD_H)) {
+    // Unsigned wraparound to negative is also handled by this
+    if ((x >= BOARD_W) || (y >= BOARD_H)) {
         #ifdef DEBUG_ENABLED
-         EMU_printf("  check px=%d, py=%d : collision = WALL", (int16_t)x, (int16_t)y);
+            EMU_printf("  check px=%d, py=%d : collision = WALL", (int16_t)x, (int16_t)y);
         #endif
-        return true;
+         // Return false here since it's off the grid
+         // It's ok to do that since the player sprite is not bigger than a tile
+         // so if one edge is off a remaining corner will still get checked at the right location
+        return false;
     }
 
     uint16_t board_index = x + (y * BOARD_W);
     if (gameinfo.board[board_index] != board_player_col) {
         // Update board
         // TODO: queue a tile draw instead of handling immediately
+
+// TODO: FIX THIS, can't update BOARD here since it need to remain unmodified for Horizontal and Vertical testing sequentially
         gameinfo.board[board_index] = board_player_col;
         set_bkg_tile_xy(x, y, board_player_col);
         collision = true;
@@ -89,16 +94,12 @@ static bool board_check_xy(uint8_t x, uint8_t y, uint8_t board_player_col) {
 }
 
 
-static bool player_check_board_collisions(uint8_t player_id) {
-    bool movement_recalc_queued = false;
-    bool bounce_x = false;
-    bool bounce_y = false;
-
+static void player_check_board_collisions(uint8_t player_id) {
     player_t * p_player = &(gameinfo.players[player_id]);
 
     uint8_t board_player_col = board_player_colors[player_id];
-    uint8_t px       = p_player->x.h;
-    uint8_t py       = p_player->y.h;
+    uint8_t px       = p_player->next_x.h;
+    uint8_t py       = p_player->next_y.h;
 
     #ifdef DEBUG_ENABLED
         EMU_printf("* Collide check %d: player=%d : x=%d, y=%d", (uint16_t)player_id, (uint16_t)px, (uint16_t)py);
@@ -107,31 +108,17 @@ static bool player_check_board_collisions(uint8_t player_id) {
     // Test separately here since collision check also updates board tile color
     if (p_player->speed_x != 0) {
         uint8_t test_x = (p_player->speed_x > 0) ? PLAYER_RIGHT(px) : PLAYER_LEFT(px);
-        if (board_check_xy(test_x, PLAYER_TOP(py),    board_player_col)) bounce_x = true;
-        if (board_check_xy(test_x, PLAYER_BOTTOM(py), board_player_col)) bounce_x = true;
+        if (board_check_xy(test_x, PLAYER_TOP(py),    board_player_col)) p_player->bounce_x = true;
+        if (board_check_xy(test_x, PLAYER_BOTTOM(py), board_player_col)) p_player->bounce_x = true;
     }
 
     // Check Vertical movement
     // Test separately here since collision check also updates board tile color
     if (p_player->speed_y != 0) {
         uint8_t test_y = (p_player->speed_y > 0) ? PLAYER_BOTTOM(py) : PLAYER_TOP(py);
-        if (board_check_xy(PLAYER_LEFT(px),  test_y, board_player_col)) bounce_y = true;
-        if (board_check_xy(PLAYER_RIGHT(px), test_y, board_player_col)) bounce_y = true;
+        if (board_check_xy(PLAYER_LEFT(px),  test_y, board_player_col)) p_player->bounce_y = true;
+        if (board_check_xy(PLAYER_RIGHT(px), test_y, board_player_col)) p_player->bounce_y = true;
     }
-
-    // If there was a collision then calculate bounce angle
-    if (bounce_x) {
-        p_player->angle = (uint8_t)(ANGLE_TO_8BIT(360) - p_player->angle);
-        movement_recalc_queued = true;
-    }
-
-    if (bounce_y) {
-        p_player->angle = (uint8_t)(ANGLE_TO_8BIT(180) - p_player->angle);
-        movement_recalc_queued = true;
-    }
-
-
-    return movement_recalc_queued;
 }
 
 
@@ -139,61 +126,60 @@ static bool player_check_board_collisions(uint8_t player_id) {
 //
 // Check for collision with BG Tile and modify it
 //
-static bool player_check_wall_collisions(uint8_t player_id) {
+static void player_check_wall_collisions(uint8_t player_id) {
 
     bool movement_recalc_queued = false;
     player_t * p_player = &(gameinfo.players[player_id]);
 
-    // X (horizontal)
-    if ( ((p_player->x.w + p_player->speed_x) < PLAYER_MIN_X_U16) ||
-         ((p_player->x.w + p_player->speed_x) > PLAYER_MAX_X_U16) ) {
-        p_player->angle = (uint8_t)(ANGLE_TO_8BIT(360) - p_player->angle);
-        movement_recalc_queued = true;
-    }
-    // Y (vertical)
-    if ( ((p_player->y.w + p_player->speed_y) < PLAYER_MIN_Y_U16) ||
-         ((p_player->y.w + p_player->speed_y) > PLAYER_MAX_Y_U16) ) {
-        p_player->angle = (uint8_t)(ANGLE_TO_8BIT(180) - p_player->angle);
+    // Check Horizontal movement
+    if ((p_player->next_x.w < PLAYER_MIN_X_U16) || (p_player->next_x.w > PLAYER_MAX_X_U16))
+        p_player->bounce_x = true;
 
-        movement_recalc_queued = true;
-    }
-
-    return movement_recalc_queued;
+    // Check Vertical movement
+    if ((p_player->next_y.w < PLAYER_MIN_Y_U16) || (p_player->next_y.w > PLAYER_MAX_Y_U16))
+        p_player->bounce_y = true;
 }
 
 
 static void players_update(void) {
 
     player_t * p_player;
-    bool movement_recalc_queued;
 
-
-    // for (uint8_t c = 0; c < 1; c++) {
     for (uint8_t c = 0; c < gameinfo.player_count; c++) {
-        movement_recalc_queued = false;
 
-        // Apply the new delta movement
-
-
-        if (player_check_wall_collisions(c))
-            movement_recalc_queued = true;
-
-        if (player_check_board_collisions(c))
-            movement_recalc_queued = true;
-
-        // == Apply the position updates
         p_player = &(gameinfo.players[c]);
 
-        if (movement_recalc_queued == true) {
+        // Calculate next position and reset flags
+        p_player->bounce_x = p_player->bounce_y = false;
+        p_player->next_x.w = p_player->x.w + p_player->speed_x;
+        p_player->next_y.w = p_player->y.w + p_player->speed_y;
+
+        player_check_wall_collisions(c);
+        player_check_board_collisions(c);
+
+        #ifdef DEBUG_ENABLED
+            EMU_printf("  * Result for %d: bounce_x=%d, bounce_y = %d", (uint16_t)c, (uint16_t)p_player->bounce_x, (uint16_t)p_player->bounce_y);
+        #endif
+        // If there was a collision then calculate bounce angle
+        // and don't update position
+        if (p_player->bounce_x || p_player->bounce_y) {
+
+            if (p_player->bounce_x)
+                p_player->angle = (uint8_t)(ANGLE_TO_8BIT(360) - p_player->angle);
+
+            if (p_player->bounce_y)
+                p_player->angle = (uint8_t)(ANGLE_TO_8BIT(180) - p_player->angle);
 
             // Slightly perturb the player angle if there was a collision
             p_player->angle = (uint8_t)(p_player->angle + (int8_t)(rand() & 0x03u) - 1);
             player_update_direction(c);
-        }
 
-        // Apply the new delta movement
-        p_player->x.w += p_player->speed_x;
-        p_player->y.w += p_player->speed_y;
+        } else {
+            // Otherwise update position to new location
+            // Apply the new delta movement
+            p_player->x.w = p_player->next_x.w;
+            p_player->y.w = p_player->next_y.w;
+        }
     }
 
     players_redraw_sprites();
@@ -303,7 +289,7 @@ void board_run(void) {
 
     while(TRUE) {
 
-        players_update();
-        vsync();
+       players_update();
+       vsync();
     }
 }
