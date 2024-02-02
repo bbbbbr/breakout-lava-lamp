@@ -21,6 +21,23 @@ LCCFLAGS_sms     =
 LCCFLAGS_gg      =
 LCCFLAGS_nes     = -autobank
 
+
+
+# Set ROM Title / Name
+# Title that generates a Grey CGB palette (id:0x16 -> checksum 0x58)
+#                       "123456789012345"
+LCCFLAGS_gb    += -Wm-yn"BOUNCENLAVALAMP" # sum(hex) = 0x458 & 0xFF = checksum 0x58
+
+# Set CGB Boot ROM color palette to 0x13 (relies on title settings above)
+# 1. Old Licensee is already 0x33 -> Use New Licensee
+# 2. Sets New Licensee to "01" "(Nintendo)
+# 3. (Calculated by Sum of ROM Header title bytes 0x134 through 0x142 [excluding cgb flag at 0x143]) & 0xFF = checksum val 0xNN -> CGB Boot Pal X
+#    Legal chars are from 0x20 - 0x5F
+#    https://gbdev.io/pandocs/Power_Up_Sequence.html#compatibility-palettes
+#    https://tcrf.net/Notes:Game_Boy_Color_Bootstrap_ROM#Manual_Select_Palette_Configurations
+LCCFLAGS_gb  += -Wm-yk01
+
+
 LCCFLAGS += $(LCCFLAGS_$(EXT)) # This adds the current platform specific LCC Flags
 
 LCCFLAGS += -Wl-j -Wm-yoA -Wm-ya4 -Wb-ext=.rel -Wb-v # MBC + Autobanking related flags
