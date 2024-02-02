@@ -25,15 +25,13 @@
 #define PLAYER_COUNT_DEFAULT (PLAYER_COUNT_2)
 #define PLAYER_COUNT_MAX     (PLAYER_COUNT_4)
 
-// Board Tile ID Nums
-#define BOARD_COL_0 0u  // White
-#define BOARD_COL_1 3u  // Black
-#define BOARD_COL_2 2u  // Dark Grey
-#define BOARD_COL_3 1u  // Light Grey
+#define BOARD_COL_WHITE  0u
+#define BOARD_COL_BLACK  3u
+#define BOARD_COL_D_GREY 2u
+#define BOARD_COL_L_GREY 1u
 
-// Player Tile ID Nums
-#define PLAYER_COL_0 0u // Black
-#define PLAYER_COL_1 1u // White
+#define PLAYER_COL_BLACK 0u
+#define PLAYER_COL_WHITE 1u
 
 void board_init(void);
 void board_run(void);

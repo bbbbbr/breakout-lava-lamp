@@ -13,13 +13,16 @@
 #include "gameboard.h"
 
 
+// Background colors for the board (2x1 and 2x2 style)
 const uint8_t board_player_colors[PLAYER_COUNT_MAX] = {
-    BOARD_COL_0, BOARD_COL_1, BOARD_COL_2, BOARD_COL_3
+    BOARD_COL_WHITE,  BOARD_COL_BLACK,
+    BOARD_COL_D_GREY, BOARD_COL_L_GREY
 };
 
+// Sprite colors for the player ball (2x1 and 2x2 style)
 const uint8_t player_colors[PLAYER_COUNT_MAX] = {
-    PLAYER_COL_0, PLAYER_COL_1,
-    PLAYER_COL_0, PLAYER_COL_1
+    PLAYER_COL_BLACK, PLAYER_COL_WHITE,
+    PLAYER_COL_WHITE, PLAYER_COL_BLACK
 };
 
 
