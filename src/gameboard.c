@@ -28,7 +28,6 @@ const uint8_t player_colors[PLAYER_COUNT_MAX] = {
 #define SPR_OFFSET_X (DEVICE_SPRITE_PX_OFFSET_X / 2)
 #define SPR_OFFSET_Y ((DEVICE_SPRITE_PX_OFFSET_Y / 2) + (DEVICE_SPRITE_PX_OFFSET_Y / 4))
 
-// ====== PLAYERS ======
 
 
 // Player corner calculations (Sprite is 8 pixels wide, so from Center: Left/Top = -4, Right/Bottom = +3)
@@ -37,6 +36,11 @@ const uint8_t player_colors[PLAYER_COUNT_MAX] = {
 #define PLAYER_TOP(py)    ((py - ((SPRITE_HEIGHT / 2)    )) / BOARD_GRID_SZ)
 #define PLAYER_BOTTOM(py) ((py + ((SPRITE_HEIGHT / 2) - 1)) / BOARD_GRID_SZ)
 
+
+uint16_t board_update_queue[4];
+uint8_t board_update_count;
+
+// ====== PLAYERS ======
 
 static void players_redraw_sprites(void) {
     for (uint8_t c = 0; c < gameinfo.player_count; c++) {
@@ -77,11 +81,10 @@ static bool board_check_xy(uint8_t x, uint8_t y, uint8_t board_player_col) {
 
     uint16_t board_index = x + (y * BOARD_W);
     if (gameinfo.board[board_index] != board_player_col) {
-        // Update board
-        // TODO: queue a tile draw instead of handling immediately
-
-// TODO: FIX THIS, can't update BOARD here since it need to remain unmodified for Horizontal and Vertical testing sequentially
-        gameinfo.board[board_index] = board_player_col;
+        // Don't update the board itself here since it needs to remain unmodified
+        // until both Horizontal and Vertical testing is done, so queue an update
+        board_update_queue[board_update_count++] = board_index;
+        // OPTIONAL: queue a tile draw instead of handling immediately
         set_bkg_tile_xy(x, y, board_player_col);
         collision = true;
     }
@@ -95,29 +98,38 @@ static bool board_check_xy(uint8_t x, uint8_t y, uint8_t board_player_col) {
 
 
 static void player_check_board_collisions(uint8_t player_id) {
+
+    board_update_count = 0;
     player_t * p_player = &(gameinfo.players[player_id]);
 
     uint8_t board_player_col = board_player_colors[player_id];
-    uint8_t px       = p_player->next_x.h;
-    uint8_t py       = p_player->next_y.h;
+    uint8_t nx       = p_player->next_x.h;
+    uint8_t ny       = p_player->next_y.h;
+    uint8_t px       = p_player->x.h;
+    uint8_t py       = p_player->y.h;
 
     #ifdef DEBUG_ENABLED
-        EMU_printf("* Collide check %d: player=%d : x=%d, y=%d", (uint16_t)player_id, (uint16_t)px, (uint16_t)py);
+        EMU_printf("* Collide check player=%d : x=%d, y=%d", (uint16_t)player_id, (uint16_t)px, (uint16_t)py);
     #endif
-    // Check Horizontal movement
+    // Check Horizontal movement (New X & Current Y in order to avoid false triggers on Y)
     // Test separately here since collision check also updates board tile color
     if (p_player->speed_x != 0) {
-        uint8_t test_x = (p_player->speed_x > 0) ? PLAYER_RIGHT(px) : PLAYER_LEFT(px);
+        uint8_t test_x = (p_player->speed_x > 0) ? PLAYER_RIGHT(nx) : PLAYER_LEFT(nx);
         if (board_check_xy(test_x, PLAYER_TOP(py),    board_player_col)) p_player->bounce_x = true;
         if (board_check_xy(test_x, PLAYER_BOTTOM(py), board_player_col)) p_player->bounce_x = true;
     }
 
-    // Check Vertical movement
+    // Check Vertical movement (New Y & Current X in order to avoid false triggers on X)
     // Test separately here since collision check also updates board tile color
     if (p_player->speed_y != 0) {
-        uint8_t test_y = (p_player->speed_y > 0) ? PLAYER_BOTTOM(py) : PLAYER_TOP(py);
+        uint8_t test_y = (p_player->speed_y > 0) ? PLAYER_BOTTOM(ny) : PLAYER_TOP(ny);
         if (board_check_xy(PLAYER_LEFT(px),  test_y, board_player_col)) p_player->bounce_y = true;
         if (board_check_xy(PLAYER_RIGHT(px), test_y, board_player_col)) p_player->bounce_y = true;
+    }
+
+    // Apply queued board updates
+    while (board_update_count) {
+        gameinfo.board[ board_update_queue[--board_update_count] ] = board_player_col;
     }
 }
 

@@ -33,8 +33,7 @@ void main(void){
 
     main_init();
     gameinfo.state = STATE_RUNGAME;
-    gameinfo.player_count = PLAYER_COUNT_4;
-    // gameinfo.player_count = PLAYER_COUNT_DEFAULT;
+    gameinfo.player_count = PLAYER_COUNT_DEFAULT;
 
     // TODO: wait for non-deterministic user input to seed random numbers
     initrand(0x1234u);

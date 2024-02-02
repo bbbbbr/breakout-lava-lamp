@@ -6,9 +6,17 @@
 
  // Player position is in Fixed 8.8, speed is signed 8 bit
 // Should be <= than 16
-#define PLAYER_SPEED_DEFAULT 4
+#define PLAYER_SPEED_DEFAULT 2
 #define PLAYER_SPEED_MIN     1
 #define PLAYER_SPEED_MAX     8
+
+
+#define PLAYER_COUNT_2 2u
+#define PLAYER_COUNT_4 4u
+#define PLAYER_COUNT_DEFAULT (PLAYER_COUNT_4)
+#define PLAYER_COUNT_MIN     (PLAYER_COUNT_2)
+#define PLAYER_COUNT_MAX     (PLAYER_COUNT_4)
+
 
 #define BOARD_GRID_SZ 8u
 
@@ -21,12 +29,6 @@
 
 #define PLAYER_MIN_Y_U16 ((                     0u + (SPRITE_HEIGHT / 2)) << 8)
 #define PLAYER_MAX_Y_U16 ((DEVICE_SCREEN_PX_HEIGHT - (SPRITE_HEIGHT / 2)) << 8)
-
-
-#define PLAYER_COUNT_2 2u
-#define PLAYER_COUNT_4 4u
-#define PLAYER_COUNT_DEFAULT (PLAYER_COUNT_2)
-#define PLAYER_COUNT_MAX     (PLAYER_COUNT_4)
 
 #define BOARD_COL_WHITE  0u
 #define BOARD_COL_BLACK  3u
