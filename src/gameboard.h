@@ -4,19 +4,6 @@
 #define BOARD_W (DEVICE_SCREEN_WIDTH)   // In Tiles
 #define BOARD_H (DEVICE_SCREEN_HEIGHT)  // In Tiles
 
- // Player position is in Fixed 8.8, speed is signed 8 bit
-// Should be <= than 16
-#define PLAYER_SPEED_DEFAULT 2
-#define PLAYER_SPEED_MIN     1
-#define PLAYER_SPEED_MAX     8
-
-
-#define PLAYER_COUNT_2 2u
-#define PLAYER_COUNT_4 4u
-#define PLAYER_COUNT_DEFAULT (PLAYER_COUNT_4)
-#define PLAYER_COUNT_MIN     (PLAYER_COUNT_2)
-#define PLAYER_COUNT_MAX     (PLAYER_COUNT_4)
-
 
 #define BOARD_GRID_SZ 8u
 
@@ -38,6 +25,7 @@
 #define PLAYER_COL_BLACK 0u
 #define PLAYER_COL_WHITE 1u
 
+void board_reset(void);
 void board_init(void);
 void board_run(void);
 

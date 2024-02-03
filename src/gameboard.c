@@ -10,7 +10,6 @@
 
 #include "gameboard.h"
 
-
 // Background colors for the board (2x1 and 2x2 style)
 const uint8_t board_player_colors[PLAYER_COUNT_MAX] = {
     BOARD_COL_WHITE,  BOARD_COL_BLACK,
@@ -46,33 +45,37 @@ static void players_redraw_sprites(void) {
     for (uint8_t c = 0; c < gameinfo.player_count; c++) {
         move_sprite(c, gameinfo.players[c].x.h + SPR_OFFSET_X,
                        gameinfo.players[c].y.h + SPR_OFFSET_Y);
-        #ifdef DEBUG_ENABLED
-            EMU_printf("- Redraw: player=%d : x=%d, y=%d", (uint16_t)c, (uint16_t)gameinfo.players[c].x.h, (uint16_t)gameinfo.players[c].y.h);
-        #endif
     }
 }
 
 
-static void player_update_direction(uint8_t idx) {
+// Recalc X,Y speed based on Angle and Speed for a given player
+static void player_recalc_movement(uint8_t idx) {
     uint8_t t_angle = gameinfo.players[idx].angle;
 
-    gameinfo.players[idx].speed_x = (int16_t)SIN(t_angle) * PLAYER_SPEED_DEFAULT;
+    gameinfo.players[idx].speed_x = (int16_t)SIN(t_angle) * gameinfo.speed;
     // Flip Y direction since adding positive values moves further down the screen
-    gameinfo.players[idx].speed_y = (int16_t)COS(t_angle) * PLAYER_SPEED_DEFAULT * -1;
+    gameinfo.players[idx].speed_y = (int16_t)COS(t_angle) * gameinfo.speed * -1;
+}
+
+
+// Recalc X,Y speed based on Angle and Speed for all players
+static void players_all_recalc_movement(void) {
+        // Calculate default speed based on angles and uniform speed
+    for (uint8_t c = 0; c < gameinfo.player_count; c++) {
+        player_recalc_movement(c);
+    }
 }
 
 
 // Check to see if a given board tile does not match the player (collision) or matches (no collision)
-// TODO: could inline to improve performance
+// OPTIMIZE: could inline to improve performance
 static bool board_check_xy(uint8_t x, uint8_t y, uint8_t board_player_col) {
     bool collision = false;
 
     // This is a wall collision, so no tile updates
     // Unsigned wraparound to negative is also handled by this
     if ((x >= BOARD_W) || (y >= BOARD_H)) {
-        #ifdef DEBUG_ENABLED
-            EMU_printf("  check px=%d, py=%d : collision = WALL", (int16_t)x, (int16_t)y);
-        #endif
          // Return false here since it's off the grid
          // It's ok to do that since the player sprite is not bigger than a tile
          // so if one edge is off a remaining corner will still get checked at the right location
@@ -89,10 +92,6 @@ static bool board_check_xy(uint8_t x, uint8_t y, uint8_t board_player_col) {
         collision = true;
     }
 
-    #ifdef DEBUG_ENABLED
-        EMU_printf("  check px=%d, py=%d : checkxy=%d = collision=%d", (int16_t)x, (int16_t)y, (int16_t)board_index, (int16_t)collision);
-    #endif
-
     return collision;
 }
 
@@ -108,9 +107,6 @@ static void player_check_board_collisions(uint8_t player_id) {
     uint8_t px       = p_player->x.h;
     uint8_t py       = p_player->y.h;
 
-    #ifdef DEBUG_ENABLED
-        EMU_printf("* Collide check player=%d : x=%d, y=%d", (uint16_t)player_id, (uint16_t)px, (uint16_t)py);
-    #endif
     // Check Horizontal movement (New X & Current Y in order to avoid false triggers on Y)
     // Test separately here since collision check also updates board tile color
     if (p_player->speed_x != 0) {
@@ -134,8 +130,6 @@ static void player_check_board_collisions(uint8_t player_id) {
 }
 
 
-// TODO: can walls be made into just part of the grid that doesn't erase?
-//
 // Check for collision with BG Tile and modify it
 //
 static void player_check_wall_collisions(uint8_t player_id) {
@@ -169,9 +163,6 @@ static void players_update(void) {
         player_check_wall_collisions(c);
         player_check_board_collisions(c);
 
-        #ifdef DEBUG_ENABLED
-            EMU_printf("  * Result for %d: bounce_x=%d, bounce_y = %d", (uint16_t)c, (uint16_t)p_player->bounce_x, (uint16_t)p_player->bounce_y);
-        #endif
         // If there was a collision then calculate bounce angle
         // and don't update position
         if (p_player->bounce_x || p_player->bounce_y) {
@@ -184,7 +175,7 @@ static void players_update(void) {
 
             // Slightly perturb the player angle if there was a collision
             p_player->angle = (uint8_t)(p_player->angle + (int8_t)(rand() & 0x03u) - 1);
-            player_update_direction(c);
+            player_recalc_movement(c);
 
         } else {
             // Otherwise update position to new location
@@ -198,9 +189,10 @@ static void players_update(void) {
 }
 
 
-static void players_init(void) {
+static void players_reset(void) {
 
-    if (gameinfo.player_count == PLAYER_COUNT_4) {
+    // 2x2 layout
+    if (gameinfo.player_count == PLAYERS_4_VAL) {
 
         // Place players centered in their respective regions
         // Left/Right
@@ -222,8 +214,11 @@ static void players_init(void) {
         gameinfo.players[1].angle = ANGLE_TO_8BIT(135u);
         gameinfo.players[2].angle = ANGLE_TO_8BIT(315u);
         gameinfo.players[3].angle = ANGLE_TO_8BIT(225u);
+
     }
-    else { // Default, implied: PLAYER_COUNT_2
+    else { // Default, implied: PLAYERS_2_VAL
+
+        // 2 x 1 layout
 
         gameinfo.players[0].x.h = (SCREENWIDTH / 4) * 1;
         gameinfo.players[1].x.h = (SCREENWIDTH / 4) * 3;
@@ -236,9 +231,15 @@ static void players_init(void) {
         gameinfo.players[1].angle = ANGLE_TO_8BIT(225u);
     }
 
-    // Calculate default speed based on angles and uniform speed
-    for (uint8_t c = 0; c < gameinfo.player_count; c++) {
-        player_update_direction(c);
+    // Reset remaining player state vars
+    for(uint8_t c = 0; c < gameinfo.player_count; c++) {
+        gameinfo.players[c].next_x = gameinfo.players[c].x;
+        gameinfo.players[c].next_y = gameinfo.players[c].y;
+        gameinfo.players[c].bounce_x = gameinfo.players[c].bounce_y = false;
+        // This will get recalculated when players_all_recalc_movement() is called before starting
+        gameinfo.players[c].speed_x = gameinfo.players[c].speed_y = 0u;
+
+        gameinfo.players[c].x.l = gameinfo.players[c].y.l = 0u;
     }
 }
 
@@ -252,12 +253,12 @@ static void board_init_grid(void) {
     for (uint8_t y = 0; y < BOARD_H; y++) {
         for (uint8_t x = 0; x < BOARD_W; x++) {
 
-            if (gameinfo.player_count == PLAYER_COUNT_4) {
+            if (gameinfo.player_count == PLAYERS_4_VAL) {
 
                 // Divide board into 4 color regions, Left & Right and Top & Bottom
                 *p_board = board_player_colors[ (x / (BOARD_W / 2)) + ((y / (BOARD_H / 2)) * 2u) ];
             }
-            else { // Default, implied: PLAYER_COUNT_2
+            else { // Default, implied: PLAYERS_2_VAL
 
                 // Divide board into 2 color regions, Left & Right
                 *p_board = board_player_colors[ x / (BOARD_W / 2) ]; // x + (y * BOARD_W);
@@ -274,12 +275,13 @@ static void board_init_gfx(void) {
 
     // Load the tiles
     set_bkg_data(0,    bg_tile_patterns_length  / TILE_PATTERN_SZ, bg_tile_patterns);
+
     set_sprite_data(0, spr_tile_patterns_length / TILE_PATTERN_SZ, spr_tile_patterns);
 
     // Draw the board
     set_bkg_tiles(0u, 0u, BOARD_W, BOARD_H, gameinfo.board);
 
-    hide_sprites_range(0u, MAX_HARDWARE_SPRITES);
+    hide_sprites_range(0u, MAX_HARDWARE_SPRITES - 1);
 
     for (uint8_t c = 0; c < gameinfo.player_count; c++) {
         set_sprite_tile(c, player_colors[c]);
@@ -289,19 +291,43 @@ static void board_init_gfx(void) {
 }
 
 
+// Reset Board and Players states
+// Not called when "Continue" Title Menu action is used, unless the number of players was changed
+void board_reset(void) {
+
+    // TODO: wait for non-deterministic user input to seed random numbers
+    initrand(0x1234u);
+
+    players_reset();
+    players_all_recalc_movement();
+    board_init_grid();
+}
+
+
+// Load graphics and do an initial redraw + recalc player X/Y speeds
+// Expects Board and Players to have been initialized
 void board_init(void) {
 
-    players_init();
-    board_init_grid();
     board_init_gfx();
+
+    // Always recalc player speeds when start up
+    // in case speed was changed in the menu
+    players_all_recalc_movement();
 }
 
 
 void board_run(void) {
 
     while(TRUE) {
+        UPDATE_KEYS();
+        players_update();
 
-       players_update();
-       vsync();
+        // Skip Vsync while SELECT is pressed
+        if (!(KEY_PRESSED(J_SELECT)))
+            vsync();
+
+        // Return to Title menu if some keys pressed
+        if (KEY_TICKED(J_START | J_A | J_B))
+            return;
     }
 }

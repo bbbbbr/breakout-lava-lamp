@@ -4,6 +4,7 @@
 #define J_ANY (J_UP | J_DOWN | J_LEFT | J_RIGHT | J_A | J_B | J_START | J_SELECT)
 #define J_WAIT_ALL_RELEASED 0xFF
 #define J_WAIT_ANY_PRESSED  0x00
+#define J_DPAD (J_LEFT | J_RIGHT | J_UP | J_DOWN)
 
 #define UPDATE_KEYS() previous_keys = keys; keys = joypad()
 #define UPDATE_KEY_REPEAT(MASK) if (MASK & previous_keys & keys) { key_repeat_count++; } else { key_repeat_count=0; }

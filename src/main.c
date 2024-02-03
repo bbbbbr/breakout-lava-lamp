@@ -7,6 +7,7 @@
 #include "fade.h"
 
 #include "gameboard.h"
+#include "title_screen.h"
 
 #define MBC_RAM_BANK_0    0u  // default to RAM Bank 0
 
@@ -32,40 +33,45 @@ static void main_init(void) {
 void main(void){
 
     main_init();
-    gameinfo.state = STATE_RUNGAME;
-    gameinfo.player_count = PLAYER_COUNT_DEFAULT;
 
-    // TODO: wait for non-deterministic user input to seed random numbers
-    initrand(0x1234u);
+    // TODO: move this to save-loading
+    gameinfo.state = STATE_SHOWTITLE;
+    gameinfo.is_initialized = false;
+
+    gameinfo.action       = ACTION_CONTINUE_VAL;
+    gameinfo.speed        = SPEED_SLOW_VAL;
+    gameinfo.player_count = PLAYERS_4_VAL;
+    gameinfo.player_count_last = gameinfo.player_count;
 
     while (TRUE) {
         switch(gameinfo.state) {
 
-            // case STATE_STARTUP:
-            //     break;
-
             // case STATE_SHOWSPLASH:
             //     break;
 
-            // case STATE_SHOWTITLE:
-            //     // ...
-            //     fade_in(FADE_DELAY_NORM);
-            //     // ...
-            //     fade_out(FADE_DELAY_NORM);
-            //     gameinfo.state = STATE_RUNGAME;
-            //     break;
+            case STATE_SHOWTITLE:
+                title_init();
+                fade_in(FADE_DELAY_NORM);
+
+                title_run();
+                fade_out(FADE_DELAY_NORM);
+                gameinfo.state = STATE_RUNGAME;
+                break;
 
             case STATE_RUNGAME:
+                // Reset the board if needed or the user is not Continuing
+                if ((gameinfo.is_initialized == false) || (gameinfo.action != ACTION_CONTINUE_VAL)) {
+                    gameinfo.is_initialized = true;
+                    board_reset();
+                }
+
                 board_init();
                 fade_in(FADE_DELAY_NORM);
 
                 board_run();
                 fade_out(FADE_DELAY_NORM);
-                gameinfo.state = STATE_RUNGAME;
+                gameinfo.state = STATE_SHOWTITLE;
                 break;
-
-            // case STATE_GAMEDONE:
-            //     break;
         }
         vsync();
     }

@@ -42,15 +42,6 @@ LCCFLAGS += $(LCCFLAGS_$(EXT)) # This adds the current platform specific LCC Fla
 
 LCCFLAGS += -Wl-j -Wm-yoA -Wm-ya4 -Wb-ext=.rel -Wb-v # MBC + Autobanking related flags
 
-# P2AFLAGS_gb     = -map -bpp 2 -max_palettes 4 -pack_mode gb -noflip
-# P2AFLAGS_gbc    = -map -use_map_attributes -bpp 2 -max_palettes 8 -pack_mode gb
-# P2AFLAGS_pocket = -map -bpp 2 -max_palettes 4 -pack_mode gb -noflip
-# P2AFLAGS_duck   = -map -bpp 2 -max_palettes 4 -pack_mode gb -noflip
-# P2AFLAGS_sms    = -map -use_map_attributes -bpp 4 -max_palettes 2 -pack_mode sms
-# P2AFLAGS_gg     = -map -use_map_attributes -bpp 4 -max_palettes 2 -pack_mode sms
-# P2AFLAGS_nes    = -map -bpp 2 -max_palettes 4 -pack_mode nes -noflip -use_nes_attributes -b 0
-
-# P2AFLAGS = $(P2AFLAGS_$(EXT))
 
 # GBDK_DEBUG = ON
 ifdef GBDK_DEBUG
@@ -76,28 +67,31 @@ CSOURCES    = $(foreach dir,$(SRCDIR),$(notdir $(wildcard $(dir)/*.c))) $(foreac
 ASMSOURCES  = $(foreach dir,$(SRCDIR),$(notdir $(wildcard $(dir)/*.s)))
 OBJS        = $(CSOURCES:%.c=$(OBJDIR)/%.o) $(ASMSOURCES:%.s=$(OBJDIR)/%.o)
 
-# For png2asset: converting map source pngs -> .c -> .o
-MAPPNGS    = $(foreach dir,$(RESDIR),$(notdir $(wildcard $(dir)/*.png)))
-MAPSRCS    = $(MAPPNGS:%.png=$(RESOBJSRC)/%.c)
-MAPOBJS    = $(MAPSRCS:$(RESOBJSRC)/%.c=$(OBJDIR)/%.o)
+# For png2asset: converting PNG source pngs -> .c -> .o
+PNGS    = $(foreach dir,$(RESDIR),$(notdir $(wildcard $(dir)/*.png)))
+PNGSRCS    = $(PNGS:%.png=$(RESOBJSRC)/%.c)
+PNGOBJS    = $(PNGSRCS:$(RESOBJSRC)/%.c=$(OBJDIR)/%.o)
 
-.PRECIOUS: $(MAPSRCS)
+.PRECIOUS: $(PNGSRCS)
+# .PRECIOUS: $(PNGSRCS)
 
-CFLAGS += -I$(OBJDIR) 
+CFLAGS += -I$(OBJDIR)
 
 # Builds all targets sequentially
 all: $(TARGETS)
 
-# Use png2asset to convert the png into C formatted map data
+# Use png2asset to convert the png into C formatted data
 # -c ...   : Set C output file
 # Convert metasprite .pngs in res/ -> .c files in obj/<platform ext>/src/
-$(RESOBJSRC)/%.c:	$(RESDIR)/%.png
-	$(PNG2ASSET) $< $(P2AFLAGS) -c $@
+.SECONDEXPANSION:
+$(RESOBJSRC)/%.c:	$(RESDIR)/%.png $$(wildcard $(RESDIR)/%.png.meta)
+	$(PNG2ASSET) $< `cat <$<.meta 2>/dev/null` -c $@
 
-# Compile the map pngs that were converted to .c files
+# Compile the pngs that were converted to .c files
 # .c files in obj/<platform ext>/src/ -> .o files in obj/
 $(OBJDIR)/%.o:	$(RESOBJSRC)/%.c
 	$(LCC) $(LCCFLAGS) $(CFLAGS) -c -o $@ $<
+
 
 # Dependencies (using output from -Wf-MMD -Wf-Wp-MP)
 DEPS = $(OBJS:%.o=%.d)
@@ -121,12 +115,12 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.s
 $(OBJDIR)/%.s:	$(SRCDIR)/%.c
 	$(LCC) $(LCCFLAGS) $(CFLAGS) -S -o $@ $<
 
-# Convert and build maps first so they're available when compiling the main sources
-$(OBJS):	$(MAPOBJS)
+# Convert and build png image data first so they're available when compiling the main sources
+$(OBJS):	$(PNGOBJS)
 
 # Link the compiled object files into a .gb ROM file
 $(BINS):	$(OBJS)
-	$(LCC) $(LCCFLAGS) $(CFLAGS) -o $(BINDIR)/$(PROJECTNAME).$(EXT) $(MAPOBJS) $(OBJS)
+	$(LCC) $(LCCFLAGS) $(CFLAGS) -o $(BINDIR)/$(PROJECTNAME).$(EXT) $(PNGOBJS) $(OBJS)
 
 clean:
 	@echo Cleaning
