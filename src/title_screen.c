@@ -34,7 +34,7 @@ const uint8_t cursors_players_y = 101u + (uint8_t)DEVICE_SPRITE_PX_OFFSET_Y;
 const uint8_t cursors_players_x[2] = {SPR_OFST_X(56u),
                                       SPR_OFST_X(56u + 40u) };
 
-const uint8_t action_values[3] = {ACTION_CONTINUE_VAL, ACTION_RESTART_VAL, ACTION_RANDOM_VAL};
+const uint8_t action_values[3] = {ACTION_CONTINUE_VAL, ACTION_STD_RANDOM_VAL, ACTION_RANDOM_VAL};
 const uint8_t speed_values[4]  = {SPEED_SLOWEST_VAL, SPEED_SLOW_VAL, SPEED_FAST_VAL, SPEED_FASTEST_VAL};
 const uint8_t player_values[2] = {PLAYERS_2_VAL , PLAYERS_4_VAL};
 
