@@ -296,7 +296,10 @@ static void board_init_gfx(void) {
 void board_reset(void) {
 
     // TODO: wait for non-deterministic user input to seed random numbers
-    initrand(0x1234u);
+    if (gameinfo.action == ACTION_RANDOM)
+        initrand(gameinfo.user_rand_seed.w);
+    else
+        initrand(RAND_SEED_STANDARD);
 
     players_reset();
     players_all_recalc_movement();

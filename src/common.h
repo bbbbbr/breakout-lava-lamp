@@ -14,6 +14,7 @@
 #define STATE_SHOWTITLE   0u
 #define STATE_RUNGAME     1u
 
+#define RAND_SEED_STANDARD 0x1234u
 
 #define ACTION_CONTINUE 0u
 #define ACTION_RESTART  1u
@@ -62,6 +63,7 @@ typedef struct gameinfo_t {
     uint8_t speed;
     uint8_t action;
     bool    is_initialized;
+    fixed   user_rand_seed;
 
     player_t players[PLAYER_COUNT_MAX];
     uint8_t board[BOARD_W * BOARD_H];

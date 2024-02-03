@@ -149,15 +149,29 @@ void title_run(void) {
 
     UPDATE_KEYS();
 
+    // First half of random init
+    // (in case they don't click around after returning to the menu
+    //  when the menu item is already on "Random" and so misses that seed)
+    // This will always be the same on startup,
+    // but thereafter differs when the user returns to the menu
+    gameinfo.user_rand_seed.l = DIV_REG;
+
     // Idle until user presses any button
     while (1) {
 
         UPDATE_KEYS();
 
         if (KEY_TICKED(J_DPAD)) {
+
+            // More first half of random init (updated with user moving around the menu)
+            gameinfo.user_rand_seed.l = DIV_REG;
             cursors_update( GET_KEYS_TICKED(J_DPAD) );
         }
         else if (KEY_TICKED(J_START | J_A)) {
+
+            // Second half of random init (updated with user exiting the menu)
+            gameinfo.user_rand_seed.h = DIV_REG;
+
             settings_apply();
             // Sample div reg
             return;
