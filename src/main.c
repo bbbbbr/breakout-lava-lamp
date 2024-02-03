@@ -6,19 +6,22 @@
 #include "input.h"
 #include "fade.h"
 
+#include "save_and_restore.h"
 #include "gameboard.h"
 #include "title_screen.h"
 
 #define MBC_RAM_BANK_0    0u  // default to RAM Bank 0
 
+uint8_t gamestate; // main loop state
+
 static void main_init(void) {
-    // #if defined(CART_mbc5) || defined(CART_mbc5_rumble)
+    #if defined(CART_mbc5) || defined(CART_mbc5_rumble)
         // Initialize MBC bank defaults
         // Upper ROM bank to 1, And SRAM/XRAM bank to 0
         SWITCH_ROM_MBC5(1);
         SWITCH_RAM(MBC_RAM_BANK_0);
         DISABLE_RAM_MBC5;
-    // #endif
+    #endif
 
     HIDE_BKG;
     HIDE_SPRITES;
@@ -28,23 +31,18 @@ static void main_init(void) {
     fade_out(FADE_DELAY_NORM);
     SHOW_BKG;
     SHOW_SPRITES;
+
+    savedata_load();
 }
 
 void main(void){
 
     main_init();
 
-    // TODO: move this to save-loading
-    gameinfo.state = STATE_SHOWTITLE;
-    gameinfo.is_initialized = false;
-
-    gameinfo.action       = ACTION_CONTINUE_VAL;
-    gameinfo.speed        = SPEED_SLOW_VAL;
-    gameinfo.player_count = PLAYERS_4_VAL;
-    gameinfo.player_count_last = gameinfo.player_count;
+    gamestate = STATE_SHOWTITLE;
 
     while (TRUE) {
-        switch(gameinfo.state) {
+        switch(gamestate) {
 
             // case STATE_SHOWSPLASH:
             //     break;
@@ -55,7 +53,7 @@ void main(void){
 
                 title_run();
                 fade_out(FADE_DELAY_NORM);
-                gameinfo.state = STATE_RUNGAME;
+                gamestate = STATE_RUNGAME;
                 break;
 
             case STATE_RUNGAME:
@@ -70,7 +68,7 @@ void main(void){
 
                 board_run();
                 fade_out(FADE_DELAY_NORM);
-                gameinfo.state = STATE_SHOWTITLE;
+                gamestate = STATE_SHOWTITLE;
                 break;
         }
         vsync();

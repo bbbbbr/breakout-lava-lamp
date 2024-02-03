@@ -16,13 +16,14 @@
 
 #define RAND_SEED_STANDARD 0x1234u
 
+// == See "save_and_restore.c" for where defaults are loaded ==
+
 #define ACTION_CONTINUE    0u
 #define ACTION_STD_RANDOM  1u
 #define ACTION_RANDOM      2u
     #define ACTION_CONTINUE_VAL    0u
     #define ACTION_STD_RANDOM_VAL  1u
     #define ACTION_RANDOM_VAL      2u
-
 
 #define SPEED_SLOWEST  0u
 #define SPEED_SLOW     1u
@@ -42,6 +43,12 @@
     #define PLAYER_COUNT_MIN    (PLAYERS_2_VAL)
     #define PLAYER_COUNT_MAX    (PLAYERS_4_VAL)
 
+// Save record signature check
+#define SAVEDATA_SIG_CHECK_0 0xA50Fu
+#define SAVEDATA_SIG_CHECK_1 0x1E78u
+
+#define SAVE_VERSION_NUM   1u // Increment when making breaking changes to save data structure
+
 
 typedef struct player_t {
     fixed x;
@@ -57,14 +64,19 @@ typedef struct player_t {
 
 
 typedef struct gameinfo_t {
-    uint8_t state;
+    // Don't change order, it will scramble cart saves
+    uint8_t  save_checksum;
+    uint16_t save_check0;
+    uint16_t save_check1;
+    uint8_t save_version;
+
     uint8_t player_count;
     uint8_t player_count_last;
     uint8_t speed;
     uint8_t action;
     bool    is_initialized;
     fixed   user_rand_seed;
-    uint16_t system_rand_seed_saved;  // TODO:  // Save: gameinfo.system_rand_seed_saved = __rand_seed;  // ... // Restore: __rand_seed = gameinfo.system_rand_seed_saved;
+    uint16_t system_rand_seed_saved;
 
     player_t players[PLAYER_COUNT_MAX];
     uint8_t board[BOARD_W * BOARD_H];

@@ -1,12 +1,13 @@
 #include <gbdk/platform.h>
 #include <gbdk/metasprites.h>
-#include <gbdk/emu_debug.h>
+// #include <gbdk/emu_debug.h>
 #include <rand.h>
 
 #include "common.h"
 #include "input.h"
 #include "gfx.h"
 #include "math_util.h"
+#include "save_and_restore.h"
 
 #include "gameboard.h"
 
@@ -295,7 +296,6 @@ static void board_init_gfx(void) {
 // Not called when "Continue" Title Menu action is used, unless the number of players was changed
 void board_reset(void) {
 
-    // TODO: wait for non-deterministic user input to seed random numbers
     if (gameinfo.action == ACTION_RANDOM)
         initrand(gameinfo.user_rand_seed.w);
     else
@@ -321,8 +321,15 @@ void board_init(void) {
 
 void board_run(void) {
 
+    uint8_t save_counter = 0u;
+
+    // Always reset action to "Continue" once a board has been started
+    // so that when it gets restored after power-on it defaults to continuing
+    gameinfo.action = ACTION_CONTINUE_VAL;
+
     while(TRUE) {
         UPDATE_KEYS();
+
         players_update();
 
         // Skip Vsync while SELECT is pressed
@@ -330,7 +337,17 @@ void board_run(void) {
             vsync();
 
         // Return to Title menu if some keys pressed
-        if (KEY_TICKED(J_START | J_A | J_B))
+        // + save game state
+        if (KEY_TICKED(J_START | J_A | J_B)) {
+            savedata_save();
             return;
+        }
+
+        // Save game state periodically
+        save_counter++;
+        if (save_counter >= SAVE_FRAMES_THRESHOLD) {
+            save_counter = 0u;
+            savedata_save();
+        }
     }
 }
