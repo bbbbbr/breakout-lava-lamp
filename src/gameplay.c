@@ -33,25 +33,25 @@ static void handle_dpad_options(uint8_t keys_ticked) {
         // Option adjustments assume always powers of 2
         // to easily shift up/down between valid settings
 
-        case J_UP:
+        case J_RIGHT:
             // Speed Up
             if (gameinfo.speed < SPEED_MAX) gameinfo.speed <<= 1;
             break;
 
-        case J_DOWN:
+        case J_LEFT:
             // Speed Down
             if (gameinfo.speed > SPEED_MIN) gameinfo.speed >>= 1;
             break;
 
         // Number of Players Up/Down
-        case J_LEFT:
+        case J_DOWN:
             // Less Players
             if (gameinfo.player_count > PLAYER_COUNT_MIN) gameinfo.player_count >>= 1;
             // Hide any sprites that might no longer be needed
              hide_sprites_range(gameinfo.player_count, MAX_HARDWARE_SPRITES - 1);
             break;
 
-        case J_RIGHT:
+        case J_UP:
             // More Players
             if (gameinfo.player_count < PLAYER_COUNT_MAX) gameinfo.player_count <<= 1;
             break;
