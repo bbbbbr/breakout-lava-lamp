@@ -43,6 +43,34 @@
     #define PLAYER_COUNT_MIN    (PLAYERS_2_VAL)
     #define PLAYER_COUNT_MAX    (PLAYERS_4_VAL)
 
+
+
+#define BOARD_W (DEVICE_SCREEN_WIDTH)   // In Tiles
+#define BOARD_H (DEVICE_SCREEN_HEIGHT)  // In Tiles
+
+
+#define BOARD_GRID_SZ 8u
+
+// Min/Max are screen borders less sprite width
+#define SPRITE_WIDTH  8u
+#define SPRITE_HEIGHT 8u
+
+#define PLAYER_MIN_X_U16 ((                    0u + (SPRITE_WIDTH / 2)) << 8)
+#define PLAYER_MAX_X_U16 ((DEVICE_SCREEN_PX_WIDTH - (SPRITE_WIDTH / 2)) << 8)
+
+#define PLAYER_MIN_Y_U16 ((                     0u + (SPRITE_HEIGHT / 2)) << 8)
+#define PLAYER_MAX_Y_U16 ((DEVICE_SCREEN_PX_HEIGHT - (SPRITE_HEIGHT / 2)) << 8)
+
+#define BOARD_COL_WHITE  0u
+#define BOARD_COL_BLACK  3u
+#define BOARD_COL_D_GREY 2u
+#define BOARD_COL_L_GREY 1u
+
+#define PLAYER_COL_BLACK 0u
+#define PLAYER_COL_WHITE 1u
+
+
+
 // Save record signature check
 #define SAVEDATA_SIG_CHECK_0 0xA50Fu
 #define SAVEDATA_SIG_CHECK_1 0x1E78u
@@ -86,6 +114,10 @@ typedef struct gameinfo_t {
 } gameinfo_t;
 
 extern gameinfo_t gameinfo;
+
+extern const uint8_t board_player_colors[PLAYER_COUNT_MAX];
+extern const uint8_t player_colors[PLAYER_COUNT_MAX];
+
 
 #endif // _COMMON_H
 
