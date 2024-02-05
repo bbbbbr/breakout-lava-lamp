@@ -18,6 +18,9 @@
 
 // == See "save_and_restore.c" for where defaults are loaded ==
 
+#define PLAYER_TEAMS_COUNT   4u    // 4 teams with different colors
+#define PLAYER_TEAMS_MASK 0x03u // Bitmask for reducing counters down to a member of a given team
+
 #define ACTION_CONTINUE    0u
 #define ACTION_STD_RANDOM  1u
 #define ACTION_RANDOM      2u
@@ -52,7 +55,7 @@
     #define PLAYERS_32_VAL    32u
 
     #define PLAYER_COUNT_MIN    (PLAYERS_2_VAL)
-    #define PLAYER_COUNT_MAX    (PLAYERS_4_VAL)
+    #define PLAYER_COUNT_MAX    (PLAYERS_32_VAL)
 
 
 
@@ -77,8 +80,8 @@
 #define BOARD_COL_D_GREY 2u
 #define BOARD_COL_L_GREY 1u
 
-#define PLAYER_COL_BLACK 0u
-#define PLAYER_COL_WHITE 1u
+#define PLAYER_SPR_COL_BLACK 0u
+#define PLAYER_SPR_COL_WHITE 1u
 
 
 // === GAME STATE AND SAVE DATA ===
@@ -136,8 +139,8 @@ typedef struct gameinfo_t {
 
 extern gameinfo_t gameinfo;
 
-extern const uint8_t board_player_colors[PLAYER_COUNT_MAX];
-extern const uint8_t player_colors[PLAYER_COUNT_MAX];
+extern const uint8_t board_team_bg_colors[PLAYER_TEAMS_COUNT];
+extern const uint8_t player_sprite_colors[PLAYER_TEAMS_COUNT];
 
 
 #endif // _COMMON_H

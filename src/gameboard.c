@@ -23,12 +23,12 @@ static void board_init_grid(void) {
             if (gameinfo.player_count == PLAYERS_4_VAL) {
 
                 // Divide board into 4 color regions, Left & Right and Top & Bottom
-                *p_board = board_player_colors[ (x / (BOARD_W / 2)) + ((y / (BOARD_H / 2)) * 2u) ];
+                *p_board = board_team_bg_colors[ (x / (BOARD_W / 2)) + ((y / (BOARD_H / 2)) * 2u) ];
             }
             else { // Default, implied: PLAYERS_2_VAL
 
                 // Divide board into 2 color regions, Left & Right
-                *p_board = board_player_colors[ x / (BOARD_W / 2) ]; // x + (y * BOARD_W);
+                *p_board = board_team_bg_colors[ x / (BOARD_W / 2) ]; // x + (y * BOARD_W);
             }
             p_board++;
         }
@@ -50,8 +50,8 @@ void board_init_gfx(void) {
 
     hide_sprites_range(0u, MAX_HARDWARE_SPRITES - 1);
 
-    for (uint8_t c = 0; c < gameinfo.player_count; c++) {
-        set_sprite_tile(c, player_colors[c & 0x03u]);
+    for (uint8_t c = 0; c < PLAYER_COUNT_MAX; c++) {
+        set_sprite_tile(c, player_sprite_colors[c & PLAYER_TEAMS_MASK]);  // Mask down player id to one of the teams
     }
 
     if (gameinfo.sprites_enabled) players_redraw_sprites();
