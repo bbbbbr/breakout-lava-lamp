@@ -41,8 +41,12 @@ Controls:
 
 ### Game Play Field Title
 Controls:
-- Select: Run faster while pressed
-- Start/A: Return to Title Screen Menu
+- Start/A/B: Return to Title Screen Menu
+- Select:
+  - Runs faster while long-pressed
+  - Toggles player balls on/off when short-tapped
+- Up/Down: Increases/Decreases speed
+- Left/Right: Decreases/Increases number of player balls
 
 
 ### Building

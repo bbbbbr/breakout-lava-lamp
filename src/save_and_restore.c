@@ -34,6 +34,7 @@ void savedata_reset(void) {
     gameinfo.save_check0 = SAVEDATA_SIG_CHECK_0;
     gameinfo.save_check1 = SAVEDATA_SIG_CHECK_1;
     gameinfo.save_version = SAVE_VERSION_NUM;
+    gameinfo.sprites_enabled = true;
 
     // Power-on defaults
     gameinfo.is_initialized = false;

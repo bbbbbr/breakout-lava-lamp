@@ -174,7 +174,7 @@ void players_update(void) {
         }
     }
 
-    players_redraw_sprites();
+    if (gameinfo.sprites_enabled) players_redraw_sprites();
 }
 
 

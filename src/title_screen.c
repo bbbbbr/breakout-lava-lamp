@@ -139,6 +139,7 @@ void title_init(void) {
     set_sprite_data(0,title_screen_sprites_TILE_COUNT, title_screen_sprites_tiles);
 
     hide_sprites_range(0, MAX_HARDWARE_SPRITES - 1);
+    SHOW_SPRITES;
 
     // Set up cursors
     cursors_redraw();

@@ -37,7 +37,7 @@ static void board_init_grid(void) {
 
 
 // Expects screen faded out
-static void board_init_gfx(void) {
+void board_init_gfx(void) {
     // Palette loading is handled by the fade routine
 
     // Load the tiles
@@ -54,7 +54,7 @@ static void board_init_gfx(void) {
         set_sprite_tile(c, player_colors[c & 0x03u]);
     }
 
-    players_redraw_sprites();
+    if (gameinfo.sprites_enabled) players_redraw_sprites();
 }
 
 
@@ -72,48 +72,3 @@ void board_reset(void) {
     board_init_grid();
 }
 
-
-// Load graphics and do an initial redraw + recalc player X/Y speeds
-// Expects Board and Players to have been initialized
-void board_init(void) {
-
-    board_init_gfx();
-
-    // Always recalc player speeds when start up
-    // in case speed was changed in the menu
-    players_all_recalc_movement();
-}
-
-
-void board_run(void) {
-
-    uint8_t save_counter = 0u;
-
-    // Always reset action to "Continue" once a board has been started
-    // so that when it gets restored after power-on it defaults to continuing
-    gameinfo.action = ACTION_CONTINUE_VAL;
-
-    while(TRUE) {
-        UPDATE_KEYS();
-
-        players_update();
-
-        // Skip Vsync while SELECT is pressed
-        if (!(KEY_PRESSED(J_SELECT)))
-            vsync();
-
-        // Return to Title menu if some keys pressed
-        // + save game state
-        if (KEY_TICKED(J_START | J_A | J_B)) {
-            savedata_save();
-            return;
-        }
-
-        // Save game state periodically
-        save_counter++;
-        if (save_counter >= SAVE_FRAMES_THRESHOLD) {
-            save_counter = 0u;
-            savedata_save();
-        }
-    }
-}

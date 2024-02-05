@@ -36,10 +36,21 @@
     #define SPEED_FAST_VAL     4u
     #define SPEED_FASTEST_VAL  8u
 
+    #define SPEED_MIN (SPEED_SLOWEST_VAL)
+    #define SPEED_MAX (SPEED_FASTEST_VAL)
+
+
 #define PLAYERS_2      0u
 #define PLAYERS_4      1u
+#define PLAYERS_8      2u
+#define PLAYERS_16     3u
+#define PLAYERS_32     4u
     #define PLAYERS_2_VAL      2u
     #define PLAYERS_4_VAL      4u
+    #define PLAYERS_8_VAL      8u
+    #define PLAYERS_16_VAL    16u
+    #define PLAYERS_32_VAL    32u
+
     #define PLAYER_COUNT_MIN    (PLAYERS_2_VAL)
     #define PLAYER_COUNT_MAX    (PLAYERS_4_VAL)
 
@@ -70,12 +81,14 @@
 #define PLAYER_COL_WHITE 1u
 
 
+// === GAME STATE AND SAVE DATA ===
+
 
 // Save record signature check
 #define SAVEDATA_SIG_CHECK_0 0xA50Fu
 #define SAVEDATA_SIG_CHECK_1 0x1E78u
 
-#define SAVE_VERSION_NUM   1u // Increment when making breaking changes to save data structure
+#define SAVE_VERSION_NUM   2u // Increment when making breaking changes to save data structure
 
 
 typedef struct player_t {
@@ -91,6 +104,8 @@ typedef struct player_t {
 } player_t;
 
 
+// See save_and_restore.c for default initialization
+//
 typedef struct gameinfo_t {
     // Don't change order, it will scramble cart saves
     uint8_t  save_checksum;
@@ -98,10 +113,16 @@ typedef struct gameinfo_t {
     uint16_t save_check1;
     uint8_t save_version;
 
+    // Options
     uint8_t player_count;
     uint8_t player_count_last;
     uint8_t speed;
     uint8_t action;
+
+    bool sprites_enabled;
+    bool enable_sprites_next_frame;
+
+    // State
     bool    is_initialized;
     fixed   user_rand_seed;
     uint16_t system_rand_seed_saved;

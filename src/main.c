@@ -8,6 +8,7 @@
 
 #include "save_and_restore.h"
 #include "gameboard.h"
+#include "gameplay.h"
 #include "title_screen.h"
 
 #define MBC_RAM_BANK_0    0u  // default to RAM Bank 0
@@ -57,16 +58,10 @@ void main(void){
                 break;
 
             case STATE_RUNGAME:
-                // Reset the board if needed or the user is not Continuing
-                if ((gameinfo.is_initialized == false) || (gameinfo.action != ACTION_CONTINUE_VAL)) {
-                    gameinfo.is_initialized = true;
-                    board_reset();
-                }
-
-                board_init();
+                game_init();
                 fade_in(FADE_DELAY_NORM);
 
-                board_run();
+                game_run();
                 fade_out(FADE_DELAY_NORM);
                 gamestate = STATE_SHOWTITLE;
                 break;
