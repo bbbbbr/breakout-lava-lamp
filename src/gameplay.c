@@ -87,6 +87,7 @@ void game_run(void) {
     uint8_t save_counter = 0u;
     uint8_t keys_ticked;
     uint8_t select_held_count = 0u;
+    bool    paused = false;
 
     // Always reset action to "Continue" once a board has been started
     // so that when it gets restored after power-on it defaults to continuing
@@ -97,13 +98,20 @@ void game_run(void) {
         keys_ticked = GET_KEYS_TICKED(J_ANY);
 
         // Return to Title menu if some keys pressed + save game state
-        if (keys_ticked & (J_START | J_A | J_B)) {
+        if (keys_ticked & (J_A | J_B)) {
             savedata_save();
             return;
         }
         else if (keys_ticked & (J_DPAD)) {
             // Adjust some game settings live with the D-Pad
             handle_dpad_options(keys_ticked);
+        }
+        else if (keys_ticked & (J_START)) {
+            // Toggle pause, make a save if entering paused state
+            // TODO: Consider making it part of saved global game state/settings
+            paused = !paused;
+            if (paused)
+                savedata_save();
         }
 
         // Sprite Toggle and Speed Up
@@ -126,7 +134,8 @@ void game_run(void) {
             select_held_count = 0u;
         }
 
-        players_update();
+        if (!paused)
+            players_update();
 
         // Turn sprites back on after they've had a chance to update in players_update()
         // so they don't visibly pop from the old location to new
@@ -137,6 +146,7 @@ void game_run(void) {
         }
 
         // Save game state periodically
+        // TODO: consider saving less often in main loop due to large memcopy, or only save on pause / return to menu and remove this
         save_counter++;
         if (save_counter >= SAVE_FRAMES_THRESHOLD) {
             save_counter = 0u;
