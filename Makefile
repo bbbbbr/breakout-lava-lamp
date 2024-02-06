@@ -8,7 +8,7 @@ ZIP = zip
 LCC = $(GBDK_HOME)bin/lcc
 PNG2ASSET = $(GBDK_HOME)/bin/png2asset
 
-VERSION=1.0.0
+VERSION=1.1.0
 
 # Configure platform specific LCC flags here:
 LCCFLAGS_gb      = -Wl-yt0x1B -autobank # Set an MBC for banking (1B-ROM+MBC5+RAM+BATT)
