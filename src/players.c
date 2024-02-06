@@ -222,11 +222,22 @@ void players_reset(void) {
 
         // Fill in any remaining player balls that weren't initialized above
         if (c >= PLAYER_TEAMS_COUNT) {
-            // Use opposite team
+            // TODO: use algorithmic distribution with matching grid setup, alternating smaller X/Y division of regions per power of 2
+
+            // More interesting to watch, but initially ugly due to being on random bg team colors, could fix up bg colors
+            //
+            // Random location roughly within board grid with angle opposite to same on team
             gameinfo.players[c].angle = player_init_2x2_Angle[c]; //(c & PLAYER_TEAMS_MASK) ^ PLAYER_TEAMS_MASK];
-            // Random location roughly within board grid
-            gameinfo.players[c].x.w   = ((rand() & 127u) << 8u) + PLAYER_MIN_X_U16;
-            gameinfo.players[c].y.w   = ((rand() & 127u) << 8u) + PLAYER_MIN_X_U16;
+            // gameinfo.players[c].angle = rand();
+            gameinfo.players[c].x.w   = ((rand() % PLAYER_RANGE_X_U8) << 8u) + PLAYER_MIN_X_U16;
+            gameinfo.players[c].y.w   = ((rand() % PLAYER_RANGE_Y_U8) << 8u) + PLAYER_MIN_Y_U16;
+
+            // Looks better initially but less interesting thereafter due to pre-clumping
+            //
+            // Match team locations for players 1-4, but with random angle
+            // gameinfo.players[c].x.w   = gameinfo.players[c & PLAYER_TEAMS_MASK].x.w;
+            // gameinfo.players[c].y.w   = gameinfo.players[c & PLAYER_TEAMS_MASK].y.w;
+            // gameinfo.players[c].angle = rand();
         }
 
         gameinfo.players[c].next_x = gameinfo.players[c].x;

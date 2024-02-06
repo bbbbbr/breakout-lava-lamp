@@ -37,14 +37,15 @@ Actions:
 
 Controls:
 - D-Pad: Moves cursor on title screen
-- Start/A: Exits Title Screen
+- Start/A/B: Exits Title Screen
 
 ### Game Play Field Title
 Controls:
-- Start/A/B: Return to Title Screen Menu
+- A/B: Return to Title Screen Menu
 - Select:
   - Runs faster while long-pressed
   - Toggles player balls on/off when short-tapped
+- Start: Pause/Un-Pause
 - Left/Right: Increases/Decreases speed
 - Up/Down: Decreases/Increases number of player balls
 

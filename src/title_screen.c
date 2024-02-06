@@ -31,12 +31,15 @@ const uint8_t cursors_speed_x[4] = {SPR_OFST_X(29u),
                                     SPR_OFST_X(29u + (32u * 3u)) };
 
 const uint8_t cursors_players_y = 101u + (uint8_t)DEVICE_SPRITE_PX_OFFSET_Y;
-const uint8_t cursors_players_x[2] = {SPR_OFST_X(56u),
-                                      SPR_OFST_X(56u + 40u) };
+const uint8_t cursors_players_x[5] = {SPR_OFST_X(29u),
+                                      SPR_OFST_X(29u + (24u * 1u)),
+                                      SPR_OFST_X(29u + (24u * 2u)),
+                                      SPR_OFST_X(29u + (24u * 3u)),
+                                      SPR_OFST_X(29u + (24u * 4u)) };
 
 const uint8_t action_values[3] = {ACTION_CONTINUE_VAL, ACTION_STD_RANDOM_VAL, ACTION_RANDOM_VAL};
 const uint8_t speed_values[4]  = {SPEED_SLOWEST_VAL, SPEED_SLOW_VAL, SPEED_FAST_VAL, SPEED_FASTEST_VAL};
-const uint8_t player_values[2] = {PLAYERS_2_VAL , PLAYERS_4_VAL};
+const uint8_t player_values[5] = {PLAYERS_2_VAL, PLAYERS_4_VAL, PLAYERS_8_VAL, PLAYERS_16_VAL, PLAYERS_32_VAL};
 
 const uint8_t cursor_max[3] = {ARRAY_LEN(cursors_action_x)  - 1u,
                                ARRAY_LEN(cursors_speed_x)   - 1u,
@@ -73,11 +76,14 @@ static void settings_apply(void) {
     gameinfo.speed        = speed_values[   cursors_selected[MENU_SPEED]   ];
     gameinfo.player_count = player_values[ cursors_selected[MENU_PLAYERS] ];
 
+    // This is turned off now that in-game player count changing is allowed
+    /*
     // Check if game board needs a reset due to player count change
     if (gameinfo.player_count != gameinfo.player_count_last) {
         gameinfo.is_initialized = false;
         gameinfo.player_count_last = gameinfo.player_count;
     }
+    */
 }
 
 
@@ -168,7 +174,7 @@ void title_run(void) {
             gameinfo.user_rand_seed.l = DIV_REG;
             cursors_update( GET_KEYS_TICKED(J_DPAD) );
         }
-        else if (KEY_TICKED(J_START | J_A)) {
+        else if (KEY_TICKED(J_START | J_A | J_B)) {
 
             // Second half of random init (updated with user exiting the menu)
             gameinfo.user_rand_seed.h = DIV_REG;

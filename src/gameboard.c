@@ -20,15 +20,15 @@ static void board_init_grid(void) {
     for (uint8_t y = 0; y < BOARD_H; y++) {
         for (uint8_t x = 0; x < BOARD_W; x++) {
 
-            if (gameinfo.player_count == PLAYERS_4_VAL) {
-
-                // Divide board into 4 color regions, Left & Right and Top & Bottom
-                *p_board = board_team_bg_colors[ (x / (BOARD_W / 2)) + ((y / (BOARD_H / 2)) * 2u) ];
-            }
-            else { // Default, implied: PLAYERS_2_VAL
+            if (gameinfo.player_count == PLAYERS_2_VAL) {
 
                 // Divide board into 2 color regions, Left & Right
                 *p_board = board_team_bg_colors[ x / (BOARD_W / 2) ]; // x + (y * BOARD_W);
+            }
+            else { // Default, 2x2 grid split
+
+                // Divide board into 4 color regions, Left & Right and Top & Bottom
+                *p_board = board_team_bg_colors[ (x / (BOARD_W / 2)) + ((y / (BOARD_H / 2)) * 2u) ];
             }
             p_board++;
         }
