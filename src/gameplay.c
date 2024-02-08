@@ -84,6 +84,10 @@ void game_init(void) {
 
 void game_run(void) {
 
+    #ifdef DEBUG_FIXED_RUN_TIME
+        uint8_t frames_to_run = DEBUG_FIXED_RUN_TIME;
+    #endif
+
     uint8_t save_counter = 0u;
     uint8_t keys_ticked;
     uint8_t select_held_count = 0u;
@@ -94,6 +98,14 @@ void game_run(void) {
     gameinfo.action = ACTION_CONTINUE_VAL;
 
     while(TRUE) {
+
+        #ifdef DEBUG_FIXED_RUN_TIME
+            if (frames_to_run == 0)
+                while(1);
+        #endif
+
+        frames_to_run--;
+
         UPDATE_KEYS();
         keys_ticked = GET_KEYS_TICKED(J_ANY);
 

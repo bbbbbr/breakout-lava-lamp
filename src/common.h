@@ -6,6 +6,8 @@
 
 // #define DEBUG_ENABLED
 
+#define DEBUG_FIXED_RUN_TIME  120u
+
 #include "gameboard.h"
 
 #define ARRAY_LEN(A)  sizeof(A) / sizeof(A[0])
@@ -57,8 +59,18 @@
     #define PLAYER_COUNT_MIN    (PLAYERS_2_VAL)
     #define PLAYER_COUNT_MAX    (PLAYERS_32_VAL)
 
-#define BOARD_W (DEVICE_SCREEN_WIDTH)   // In Tiles
-#define BOARD_H (DEVICE_SCREEN_HEIGHT)  // In Tiles
+
+// Match board buffer sizing to HW Map *WIDTH* to simplify some calcs
+// This wastes some space, but allows some calculations to be shared 
+// Height remains the same as screen size.
+// Size is in Tiles
+#define BOARD_BUF_W (DEVICE_SCREEN_BUFFER_WIDTH)
+#define BOARD_BUF_H (DEVICE_SCREEN_HEIGHT)
+
+// This is the visible area
+// Size is in Tiles
+#define BOARD_DISP_W (DEVICE_SCREEN_WIDTH)
+#define BOARD_DISP_H (DEVICE_SCREEN_HEIGHT)
 
 
 #define BOARD_GRID_SZ 8u
@@ -132,7 +144,7 @@ typedef struct gameinfo_t {
     uint16_t system_rand_seed_saved;
 
     player_t players[PLAYER_COUNT_MAX];
-    uint8_t board[BOARD_W * BOARD_H];
+    uint8_t board[BOARD_BUF_W * BOARD_BUF_H];
 
     // Need to store and re-load the random seed?
 
