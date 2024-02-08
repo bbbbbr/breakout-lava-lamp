@@ -35,7 +35,9 @@
 #define SPEED_FAST     2u
 #define SPEED_FASTEST  3u
     // Player position is in Fixed 8.8, speed is signed 8 bit
-    // Should be <= than 16
+    // Speed gets multiplied by signed 8 bit angle value where max is 127
+    // so resulting max neg and pos speed is about (127 * N), so nearly (N << 7) 
+    // For example ((speed:8 << 7) >> 8) == 4 pixels per frame in 8.8 
     #define SPEED_SLOWEST_VAL  1u
     #define SPEED_SLOW_VAL     2u
     #define SPEED_FAST_VAL     4u
@@ -79,11 +81,11 @@
 #define SPRITE_WIDTH  8u
 #define SPRITE_HEIGHT 8u
 
-#define PLAYER_MIN_X_U16 ((                    0u + (SPRITE_WIDTH / 2)) << 8)
-#define PLAYER_MAX_X_U16 ((DEVICE_SCREEN_PX_WIDTH - (SPRITE_WIDTH / 2)) << 8)
+#define PLAYER_MIN_X_U8 (0u)
+#define PLAYER_MAX_X_U8 (DEVICE_SCREEN_PX_WIDTH - SPRITE_WIDTH)
 
-#define PLAYER_MIN_Y_U16 ((                     0u + (SPRITE_HEIGHT / 2)) << 8)
-#define PLAYER_MAX_Y_U16 ((DEVICE_SCREEN_PX_HEIGHT - (SPRITE_HEIGHT / 2)) << 8)
+#define PLAYER_MIN_Y_U8 (0u)
+#define PLAYER_MAX_Y_U8 (DEVICE_SCREEN_PX_HEIGHT - SPRITE_HEIGHT)
 
 #define PLAYER_RANGE_X_U8 (DEVICE_SCREEN_PX_WIDTH - SPRITE_WIDTH)
 #define PLAYER_RANGE_Y_U8 (DEVICE_SCREEN_PX_HEIGHT - SPRITE_HEIGHT)

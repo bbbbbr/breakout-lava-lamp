@@ -13,16 +13,16 @@
 
 
 // offset to center the 8X8 circle sprite on the x,y coordinate
-#define SPR_OFFSET_X (DEVICE_SPRITE_PX_OFFSET_X / 2)
-#define SPR_OFFSET_Y ((DEVICE_SPRITE_PX_OFFSET_Y / 2) + (DEVICE_SPRITE_PX_OFFSET_Y / 4))
+#define SPR_OFFSET_X (DEVICE_SPRITE_PX_OFFSET_X)
+#define SPR_OFFSET_Y (DEVICE_SPRITE_PX_OFFSET_Y)
 
 
 
-// Player corner calculations (Sprite is 8 pixels wide, so from Center: Left/Top = -4, Right/Bottom = +3)
-#define PLAYER_LEFT(px)   ((px - ((SPRITE_WIDTH  / 2)    )) / BOARD_GRID_SZ)
-#define PLAYER_RIGHT(px)  ((px + ((SPRITE_WIDTH  / 2) - 1)) / BOARD_GRID_SZ)
-#define PLAYER_TOP(py)    ((py - ((SPRITE_HEIGHT / 2)    )) / BOARD_GRID_SZ)
-#define PLAYER_BOTTOM(py) ((py + ((SPRITE_HEIGHT / 2) - 1)) / BOARD_GRID_SZ)
+// Player corner calculations (Sprite is 8 pixels wide, Upper Left is 0,0, Lower Right is +7,+7)
+#define PLAYER_LEFT(px)   ((px                     ) / BOARD_GRID_SZ)
+#define PLAYER_RIGHT(px)  ((px + (SPRITE_WIDTH - 1)) / BOARD_GRID_SZ)
+#define PLAYER_TOP(py)    ((py                     ) / BOARD_GRID_SZ)
+#define PLAYER_BOTTOM(py) ((py + (SPRITE_HEIGHT - 1)) / BOARD_GRID_SZ)
 
 
 uint16_t board_update_queue[PLAYER_TEAMS_COUNT];
@@ -127,12 +127,15 @@ void player_check_wall_collisions(uint8_t player_id) {
     bool movement_recalc_queued = false;
     player_t * p_player = &(gameinfo.players[player_id]);
 
+    // NOTE: Both checks rely on unsigned wraparound from 0
+    // to also do the less than MIN test
+
     // Check Horizontal movement
-    if ((p_player->next_x.w < PLAYER_MIN_X_U16) || (p_player->next_x.w > PLAYER_MAX_X_U16))
+    if (p_player->next_x.h > PLAYER_MAX_X_U8)
         p_player->bounce_x = true;
 
     // Check Vertical movement
-    if ((p_player->next_y.w < PLAYER_MIN_Y_U16) || (p_player->next_y.w > PLAYER_MAX_Y_U16))
+    if (p_player->next_y.h > PLAYER_MAX_Y_U8)
         p_player->bounce_y = true;
 }
 
@@ -229,8 +232,8 @@ void players_reset(void) {
             // Random location roughly within board grid with angle opposite to same on team
             gameinfo.players[c].angle = player_init_2x2_Angle[c]; //(c & PLAYER_TEAMS_MASK) ^ PLAYER_TEAMS_MASK];
             // gameinfo.players[c].angle = rand();
-            gameinfo.players[c].x.w   = ((rand() % PLAYER_RANGE_X_U8) << 8u) + PLAYER_MIN_X_U16;
-            gameinfo.players[c].y.w   = ((rand() % PLAYER_RANGE_Y_U8) << 8u) + PLAYER_MIN_Y_U16;
+            gameinfo.players[c].x.w   = (((rand() % PLAYER_RANGE_X_U8) + PLAYER_MIN_X_U8) << 8u);
+            gameinfo.players[c].y.w   = (((rand() % PLAYER_RANGE_Y_U8) + PLAYER_MIN_Y_U8) << 8u);
 
             // Looks better initially but less interesting thereafter due to pre-clumping
             //
