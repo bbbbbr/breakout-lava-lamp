@@ -102,9 +102,9 @@ void game_run(void) {
         #ifdef DEBUG_FIXED_RUN_TIME
             if (frames_to_run == 0)
                 while(1);
+            frames_to_run--;
         #endif
 
-        frames_to_run--;
 
         UPDATE_KEYS();
         keys_ticked = GET_KEYS_TICKED(J_ANY);
