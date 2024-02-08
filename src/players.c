@@ -64,20 +64,20 @@ bool player_board_check_xy(uint8_t x, uint8_t y, uint8_t player_team_col) {
 
     // This is a wall collision, so no tile updates
     // Unsigned wraparound to negative is also handled by this
-    if ((x >= BOARD_W) || (y >= BOARD_H)) {
+    if ((x >= BOARD_DISP_W) || (y >= BOARD_DISP_H)) {
          // Return false here since it's off the grid
          // It's ok to do that since the player sprite is not bigger than a tile
          // so if one edge is off a remaining corner will still get checked at the right location
         return false;
     }
 
-    uint16_t board_index = x + (y * BOARD_W);
+    uint16_t board_index = x + (y * BOARD_BUF_W);
     if (gameinfo.board[board_index] != player_team_col) {
         // Don't update the board itself here since it needs to remain unmodified
         // until both Horizontal and Vertical testing is done, so queue an update
         board_update_queue[board_update_count++] = board_index;
         // OPTIONAL: queue a tile draw instead of handling immediately
-        set_bkg_tile_xy(x, y, player_team_col);
+        set_vram_byte(_SCRN0 + board_index, player_team_col);
         collision = true;
     }
 
