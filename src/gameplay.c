@@ -88,7 +88,10 @@ void game_run(void) {
         uint8_t frames_to_run = DEBUG_FIXED_RUN_TIME;
     #endif
 
-    uint8_t save_counter = 0u;
+    #ifdef FEATURE_AUTO_SAVE
+        uint8_t save_counter = 0u;
+    #endif
+
     uint8_t keys_ticked;
     uint8_t select_held_count = 0u;
     bool    paused = false;
@@ -157,12 +160,15 @@ void game_run(void) {
             gameinfo.enable_sprites_next_frame = false;
         }
 
-        // Save game state periodically
-        // TODO: consider saving less often in main loop due to large memcopy, or only save on pause / return to menu and remove this
-        save_counter++;
-        if (save_counter >= SAVE_FRAMES_THRESHOLD) {
-            save_counter = 0u;
-            savedata_save();
-        }
+        #ifdef FEATURE_AUTO_SAVE
+            // Save game state periodically
+            // Disabled since this can cause a big cpu spike per frame due to large memcopy.
+            // Instead rely on the sace during pause / return to menu and remove this
+            save_counter++;
+            if (save_counter >= SAVE_FRAMES_THRESHOLD) {
+                save_counter = 0u;
+                savedata_save();
+            }
+        #endif
     }
 }

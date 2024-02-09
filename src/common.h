@@ -8,6 +8,10 @@
 
 #define DEBUG_FIXED_RUN_TIME  120u
 
+// Optional periodic auto-save
+// Disabled since this can cause a big cpu spike per frame due to large memcopy.
+// #define FEATURE_AUTO_SAVE
+
 #include "gameboard.h"
 
 #define ARRAY_LEN(A)  sizeof(A) / sizeof(A[0])
@@ -120,7 +124,7 @@ typedef struct player_t {
     bool bounce_x;
     bool bounce_y;
 } player_t;
-
+// 
 
 // See save_and_restore.c for default initialization
 //
