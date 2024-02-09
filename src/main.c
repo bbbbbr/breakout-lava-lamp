@@ -29,7 +29,7 @@ static void main_init(void) {
     DISPLAY_ON;
 	UPDATE_KEYS();
 
-    fade_out(FADE_DELAY_NORM);
+    fade_out(FADE_DELAY_NORM, BG_PAL_TITLE);
     SHOW_BKG;
     SHOW_SPRITES;
 
@@ -50,19 +50,19 @@ void main(void){
 
             case STATE_SHOWTITLE:
                 title_init();
-                fade_in(FADE_DELAY_NORM);
+                fade_in(FADE_DELAY_NORM, BG_PAL_TITLE);
 
                 title_run();
-                fade_out(FADE_DELAY_NORM);
+                fade_out(FADE_DELAY_NORM, BG_PAL_TITLE);
                 gamestate = STATE_RUNGAME;
                 break;
 
             case STATE_RUNGAME:
                 game_init();
-                fade_in(FADE_DELAY_NORM);
+                fade_in(FADE_DELAY_NORM, BG_PAL_BOARD);
 
                 game_run();
-                fade_out(FADE_DELAY_NORM);
+                fade_out(FADE_DELAY_NORM, BG_PAL_BOARD);
                 gamestate = STATE_SHOWTITLE;
                 break;
         }

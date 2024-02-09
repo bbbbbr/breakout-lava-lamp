@@ -90,8 +90,9 @@ void player_check_board_collisions(uint8_t player_id) {
     board_update_count = 0;
     player_t * p_player = &(gameinfo.players[player_id]);
 
-    // TODO: OPTIMIZE: Remove the array lookup out and just use a bitmask on the player id, Re-arrange colors so board_team_bg_colors can be dropped
-    uint8_t player_team_color = board_team_bg_colors[player_id & PLAYER_TEAMS_MASK];
+    uint8_t player_team_color = player_id & PLAYER_TEAMS_MASK;
+    // Old method, look up color based on team (now just use player id directly)
+    // uint8_t player_team_color = board_team_bg_colors[player_id & PLAYER_TEAMS_MASK];
     uint8_t nx       = p_player->next_x.h;
     uint8_t ny       = p_player->next_y.h;
     uint8_t px       = p_player->x.h;

@@ -154,7 +154,9 @@ typedef struct gameinfo_t {
 
 extern gameinfo_t gameinfo;
 
-extern const uint8_t board_team_bg_colors[PLAYER_TEAMS_COUNT];
+// Old method, look up color based on team (now just use player id directly)
+//
+// extern const uint8_t board_team_bg_colors[PLAYER_TEAMS_COUNT];
 extern const uint8_t player_sprite_colors[PLAYER_TEAMS_COUNT];
 
 

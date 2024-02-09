@@ -10,11 +10,13 @@
 gameinfo_t gameinfo;
 
 
-// Background colors for the board (2x1 and 2x2 style)
-const uint8_t board_team_bg_colors[PLAYER_TEAMS_COUNT] = {
-    BOARD_COL_WHITE,  BOARD_COL_BLACK,
-    BOARD_COL_D_GREY, BOARD_COL_L_GREY
-};
+// Old method, look up color based on team (now just use player id directly)
+//
+// // Background colors for the board (2x1 and 2x2 style)
+// const uint8_t board_team_bg_colors[PLAYER_TEAMS_COUNT] = {
+//     BOARD_COL_WHITE,  BOARD_COL_BLACK,
+//     BOARD_COL_D_GREY, BOARD_COL_L_GREY
+// };
 
 // Sprite colors for the player ball (2x1 and 2x2 style)
 // Should be opposite of intensity to board colors

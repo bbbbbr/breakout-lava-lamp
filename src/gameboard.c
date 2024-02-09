@@ -22,13 +22,17 @@ static void board_init_grid(void) {
 
             if (gameinfo.player_count == PLAYERS_2_VAL) {
 
-                // Divide board into 2 color regions, Left & Right
-                *p_board = board_team_bg_colors[ x / (BOARD_DISP_W / 2) ]; // x + (y * BOARD_DISP_W);
+                // Divide board into 2 team color regions, Left & Right
+                *p_board =  x / (BOARD_DISP_W / 2); // x + (y * BOARD_DISP_W);
+                // Old method, look up color based on team (now just use directly)
+                // *p_board = board_team_bg_colors[ x / (BOARD_DISP_W / 2) ]; // x + (y * BOARD_DISP_W);
             }
             else { // Default, 2x2 grid split
 
-                // Divide board into 4 color regions, Left & Right and Top & Bottom
-                *p_board = board_team_bg_colors[ (x / (BOARD_DISP_W / 2)) + ((y / (BOARD_DISP_H / 2)) * 2u) ];
+                // Divide board into 4 team color regions, Left & Right and Top & Bottom
+                *p_board = (x / (BOARD_DISP_W / 2)) + ((y / (BOARD_DISP_H / 2)) * 2u);
+                // Old method, look up color based on team (now just use directly)
+                // *p_board = board_team_bg_colors[ (x / (BOARD_DISP_W / 2)) + ((y / (BOARD_DISP_H / 2)) * 2u) ];
             }
             p_board++;
         }
