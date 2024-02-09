@@ -42,10 +42,10 @@
     // Speed gets multiplied by signed 8 bit angle value where max is 127
     // so resulting max neg and pos speed is about (127 * N), so nearly (N << 7) 
     // For example ((speed:8 << 7) >> 8) == 4 pixels per frame in 8.8 
-    #define SPEED_SLOWEST_VAL  1u
-    #define SPEED_SLOW_VAL     2u
-    #define SPEED_FAST_VAL     4u
-    #define SPEED_FASTEST_VAL  8u
+    #define SPEED_SLOWEST_VAL  1
+    #define SPEED_SLOW_VAL     2
+    #define SPEED_FAST_VAL     4
+    #define SPEED_FASTEST_VAL  8
 
     #define SPEED_MIN (SPEED_SLOWEST_VAL)
     #define SPEED_MAX (SPEED_FASTEST_VAL)

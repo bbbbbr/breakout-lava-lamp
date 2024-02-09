@@ -57,6 +57,9 @@ static void handle_dpad_options(uint8_t keys_ticked) {
             break;
     }
 
+    // Select current speed*sine table
+    sine_table_select(gameinfo.speed);
+
     players_all_recalc_movement();
 }
 
@@ -64,6 +67,9 @@ static void handle_dpad_options(uint8_t keys_ticked) {
 // Load graphics and do an initial redraw + recalc player X/Y speeds
 // Expects Board and Players to have been initialized
 void game_init(void) {
+
+    // Select current speed*sine table
+    sine_table_select(gameinfo.speed);
 
     // Reset the board if needed or if the user is NOT Continuing
     if ((gameinfo.is_initialized == false) || (gameinfo.action != ACTION_CONTINUE_VAL)) {
@@ -99,6 +105,9 @@ void game_run(void) {
     // Always reset action to "Continue" once a board has been started
     // so that when it gets restored after power-on it defaults to continuing
     gameinfo.action = ACTION_CONTINUE_VAL;
+
+    // Make a save right before starting
+    savedata_save();
 
     while(TRUE) {
 

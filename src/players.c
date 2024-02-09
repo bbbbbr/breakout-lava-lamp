@@ -42,9 +42,15 @@ void players_redraw_sprites(void) {
 void player_recalc_movement(uint8_t idx) {
     uint8_t t_angle = gameinfo.players[idx].angle;
 
-    gameinfo.players[idx].speed_x = (int16_t)SIN(t_angle) * gameinfo.speed;
+    gameinfo.players[idx].speed_x = (int16_t)SIN(t_angle);
     // Flip Y direction since adding positive values moves further down the screen
-    gameinfo.players[idx].speed_y = (int16_t)COS(t_angle) * gameinfo.speed * -1;
+    gameinfo.players[idx].speed_y = (int16_t)COS(t_angle) * -1;
+
+    // Old version that didn't pre-calculate Angle * Speed
+    // 
+    // gameinfo.players[idx].speed_x = (int16_t)SIN(t_angle) * gameinfo.speed;
+    // // Flip Y direction since adding positive values moves further down the screen
+    // gameinfo.players[idx].speed_y = (int16_t)COS(t_angle) * gameinfo.speed * -1;
 }
 
 

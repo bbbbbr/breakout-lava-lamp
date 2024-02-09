@@ -1,13 +1,17 @@
 #ifndef _MATH_UTIL_H
 #define _MATH_UTIL_H
 
-extern const int8_t sine_table[];
+extern const int16_t * p_sine_table;
 
 // Range 0 - 255
-#define SIN(angle)  ( sine_table[(uint8_t)angle] )
-#define COS(angle)  ( sine_table[(uint8_t)((uint8_t)angle + (256u / 4u))] ) // relies on unsigned byte wraparound (0 - 255)
+#define SIN(angle)  ( p_sine_table[(uint8_t)angle] )
+#define COS(angle)  ( p_sine_table[(uint8_t)((uint8_t)angle + (256u / 4u))] ) // relies on unsigned byte wraparound (0 - 255)
 
 #define ANGLE_TO_8BIT(angle) (uint8_t)((angle / 360.0) * 255)
+
+void sine_tables_init(void);
+
+void sine_table_select(uint8_t speed_value);
 
 // #define ANGLE_0    ANGLE_TO_8BIT(  0u)
 // #define ANGLE_45   ANGLE_TO_8BIT( 45u)

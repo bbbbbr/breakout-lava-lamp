@@ -5,6 +5,7 @@
 #include "common.h"
 #include "input.h"
 #include "fade.h"
+#include "math_util.h"
 
 #include "save_and_restore.h"
 #include "gameboard.h"
@@ -32,6 +33,8 @@ static void main_init(void) {
     fade_out(FADE_DELAY_NORM, BG_PAL_TITLE);
     SHOW_BKG;
     SHOW_SPRITES;
+
+    sine_tables_init();
 
     savedata_load();
 }

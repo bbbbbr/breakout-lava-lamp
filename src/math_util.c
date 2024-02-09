@@ -2,6 +2,17 @@
 #include <gbdk/metasprites.h>
 #include <stdint.h>
 
+#include "common.h"
+#include "math_util.h"
+
+// Precalculated Angle * Speed lookup tables
+int16_t sine_table_slowest[256];
+int16_t sine_table_slow[256];
+int16_t sine_table_fast[256];
+int16_t sine_table_fastest[256];
+
+const int16_t * p_sine_table;
+
 const int8_t sine_table[256] = {
     0,    3,    6,    9,    12,   15,   18,   21,   24,   28,   31,   34,
     37,   40,   43,   46,   48,   51,   54,   57,   60,   63,   65,   68,
@@ -26,4 +37,50 @@ const int8_t sine_table[256] = {
     -48,  -46,  -43,  -40,  -37,  -34,  -31,  -28,  -24,  -21,  -18,  -15,
     -12,  -9,   -6,   -3,
 };
+
+
+void sine_tables_init(void) {
+    uint8_t c;
+
+    c = 0u;
+    do {
+        sine_table_slowest[c] = sine_table[c] * SPEED_SLOWEST_VAL;
+        c++;
+    } while (c != 0u);
+
+    c = 0u;
+    do {
+        sine_table_slow[c] = sine_table[c] * SPEED_SLOW_VAL;
+        c++;
+    } while (c != 0u);
+
+    c = 0u;
+    do {
+        sine_table_fast[c] = sine_table[c] * SPEED_FAST_VAL;
+        c++;
+    } while (c != 0u);
+
+    c = 0u;
+    do {
+        sine_table_fastest[c] = sine_table[c] * SPEED_FASTEST_VAL;
+        c++;
+    } while (c != 0u);
+}
+
+void sine_table_select(uint8_t speed_value) {
+    switch (speed_value) {
+
+        case SPEED_SLOWEST_VAL: p_sine_table = sine_table_slowest;
+            break;
+
+        case SPEED_SLOW_VAL: p_sine_table = sine_table_slow;
+            break;
+
+        case SPEED_FAST_VAL: p_sine_table = sine_table_fast;
+            break;
+
+        case SPEED_FASTEST_VAL: p_sine_table = sine_table_fastest;
+            break;
+    }
+}
 
