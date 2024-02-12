@@ -1,6 +1,6 @@
 #include <gbdk/platform.h>
 #include <gbdk/metasprites.h>
-// #include <gbdk/emu_debug.h>
+#include <gbdk/emu_debug.h>
 #include <rand.h>
 
 #include "common.h"
@@ -31,9 +31,13 @@ uint8_t board_update_count;
 // ====== PLAYERS ======
 
 void players_redraw_sprites(void) {
+
+    player_t * p_player = &gameinfo.players[0];
+
     for (uint8_t c = 0; c < gameinfo.player_count; c++) {
-        move_sprite(c, gameinfo.players[c].x.h + SPR_OFFSET_X,
-                       gameinfo.players[c].y.h + SPR_OFFSET_Y);
+        move_sprite(c, p_player->x.h + SPR_OFFSET_X,
+                       p_player->y.h + SPR_OFFSET_Y);
+        p_player++;
     }
 }
 
@@ -90,6 +94,165 @@ bool player_board_check_xy(uint8_t x, uint8_t y, uint8_t player_team_col) {
     return collision;
 }
 
+#define SPAN_MULTI_TILE_X(px) ((px & 0x07u) != 0x04u)
+#define SPAN_MULTI_TILE_Y(py) ((py & 0x07u) != 0x04u)
+
+
+uint16_t board_index;
+uint8_t collide;
+
+#define COL_UL 1
+#define COL_UR 2
+#define COL_LL 4
+#define COL_LR 8
+
+// uint8_t player_team_color;
+
+void player_check_board_collisions_v2(uint8_t player_id, player_t * p_player) {
+
+    // bool collision = false;
+    // uint16_t board_index;
+    // board_update_count = 0u;
+    collide = 0u;
+
+    uint8_t player_team_col = player_id & PLAYER_TEAMS_MASK;
+    // Old method, look up color based on team (now just use player id directly)
+    // uint8_t player_team_color = board_team_bg_colors[player_id & PLAYER_TEAMS_MASK];
+
+    // player_t * p_player = &(gameinfo.players[player_id]);
+
+    // Check for wall collisions
+    // NOTE: Both checks rely on unsigned wraparound from 0
+    // to also do the less than MIN test
+
+        // Check Horizontal movement
+        if (p_player->next_x.h > PLAYER_MAX_X_U8)
+            p_player->bounce_x = true;
+        else
+            p_player->bounce_x = false; 
+
+        // Check Vertical movement
+        if (p_player->next_y.h > PLAYER_MAX_Y_U8)
+            p_player->bounce_y = true;
+        else
+            p_player->bounce_y = false; 
+
+    // Check Board collisions
+
+
+// TODO ==== FIX MISSING OUT OF BOUND TEST FOR BOARD BELOW ====
+        // could just mask it out after calc?
+
+    // Start in Upper-Left corner
+    // uint8_t * p_board = gameinfo.board
+        // EMU_printf(" *nx.h = %d, ny.h = %d", (uint16_t)p_player->next_x.h, p_player->next_y.h);
+    board_index = (p_player->next_x.h / BOARD_GRID_SZ) + ((p_player->next_y.h / BOARD_GRID_SZ) * BOARD_BUF_W);
+
+// *ptr style is 15,000 cycles slower on average in players_update
+
+    // Check Upper-Right Corner
+    if (SPAN_MULTI_TILE_X(p_player->next_x.h)) {
+
+        if (SPAN_MULTI_TILE_Y(p_player->next_y.h)) {
+            // All 4 corners touch dif`ferent tiles
+        // EMU_printf(" 1.board_index = %d", (uint16_t)board_index);
+
+            if (gameinfo.board[board_index] != player_team_col) {
+                    gameinfo.board[board_index] = player_team_col;
+                    set_vram_byte(_SCRN0 + board_index, player_team_col); 
+                collide = COL_UL;
+            }
+            // Next tile column
+            board_index++;`
+        // EMU_printf(" 2.board_index = %d", (uint16_t)board_index);
+            if (gameinfo.board[board_index] != player_team_col) {
+                    gameinfo.board[board_index] = player_team_col;
+                    set_vram_byte(_SCRN0 + board_index, player_team_col); 
+                collide |= COL_UR;
+            }
+
+            // Next Tile Row on board (step back to start X)
+            board_index += (BOARD_BUF_W - 1u);
+        // EMU_printf(" 3.board_index = %d", (uint16_t)board_index);
+            if (gameinfo.board[board_index] != player_team_col) {
+                    gameinfo.board[board_index] = player_team_col;
+                    set_vram_byte(_SCRN0 + board_index, player_team_col); 
+                collide = COL_LL;
+            }
+            // Next Tile column
+            board_index++;`
+        // EMU_printf(" 4.board_index = %d", (uint16_t)board_index);
+            if (gameinfo.board[board_index] != player_team_col) {
+                    gameinfo.board[board_index] = player_team_col;
+                    set_vram_byte(_SCRN0 + board_index, player_team_col); 
+                collide |= COL_LR;
+            }
+        // EMU_printf("collide = 0x%x", (uint16_t)collide);
+        }
+        else {
+            // Only Left/Right edges touch different tiles
+            if (gameinfo.board[board_index] != player_team_col) {
+                    gameinfo.board[board_index] = player_team_col;
+                    set_vram_byte(_SCRN0 + board_index, player_team_col); 
+                collide = COL_UL | COL_LL;
+            }
+            // Next Tile Column
+            board_index++;
+            if (gameinfo.board[board_index] != player_team_col)
+                collide |= COL_UR | COL_LR;
+        }
+    }
+    else {
+        // X axis only touches one tile
+        if (SPAN_MULTI_TILE_Y(p_player->next_y.h)) {
+            // Only Top/Bottom edges touch different tiles
+            if (gameinfo.board[board_index] != player_team_col) {
+                    gameinfo.board[board_index] = player_team_col;
+                    set_vram_byte(_SCRN0 + board_index, player_team_col); 
+                collide = COL_UL | COL_UR;
+            }
+    
+            // Next Tile Row on board
+            board_index += BOARD_BUF_W;
+            if (gameinfo.board[board_index] != player_team_col) {
+                    gameinfo.board[board_index] = player_team_col;
+                    set_vram_byte(_SCRN0 + board_index, player_team_col); 
+                collide |= COL_LL | COL_LR;
+            }
+        }
+        else {
+            // Ball only touches a single tile
+            if (gameinfo.board[board_index] != player_team_col) {
+                    gameinfo.board[board_index] = player_team_col;
+                    set_vram_byte(_SCRN0 + board_index, player_team_col); 
+                collide = COL_UL | COL_UR | COL_LL | COL_LR;
+            }
+        }        
+    }
+
+    if (p_player->speed_x > 0) {
+        // Right moving right
+        if (collide & (COL_UR | COL_LR))
+            p_player->bounce_x = true;
+    }
+    else if (p_player->speed_x < 0) {
+        // Left edge moving left
+        if (collide & (COL_UL | COL_LL))
+            p_player->bounce_x = true;
+    }
+
+    if (p_player->speed_y > 0) {
+        // Top moving up
+        if (collide & (COL_UL | COL_UR))
+            p_player->bounce_y = true;
+    }
+    else if (p_player->speed_y < 0) {
+        // Bottom moving left
+        if (collide & (COL_LL | COL_LR))
+            p_player->bounce_y = true;
+    }
+}
+
 
 void player_check_board_collisions(uint8_t player_id) {
 
@@ -127,11 +290,8 @@ void player_check_board_collisions(uint8_t player_id) {
 }
 
 
-// Check for collision with BG Tile and modify it
-//
 void player_check_wall_collisions(uint8_t player_id) {
 
-    bool movement_recalc_queued = false;
     player_t * p_player = &(gameinfo.players[player_id]);
 
     // NOTE: Both checks rely on unsigned wraparound from 0
@@ -147,21 +307,26 @@ void player_check_wall_collisions(uint8_t player_id) {
 }
 
 
+void players_update_asm(void) __naked;
+void players_redraw_sprites_asm(void) __naked;
+
+
+uint8_t players_count;
 void players_update(void) {
 
-    player_t * p_player;
+/*
+    players_count = gameinfo.player_count;
+    player_t * p_player = &gameinfo.players[0];
 
-    for (uint8_t c = 0; c < gameinfo.player_count; c++) {
+    for (uint8_t c = 0; c < players_count; c++) {
 
-        p_player = &(gameinfo.players[c]);
+        // Calculate next position (bounce flags get reset in test code)
+        p_player->next_x.w += p_player->speed_x;
+        p_player->next_y.w += p_player->speed_y;
 
-        // Calculate next position and reset flags
-        p_player->bounce_x = p_player->bounce_y = false;
-        p_player->next_x.w = p_player->x.w + p_player->speed_x;
-        p_player->next_y.w = p_player->y.w + p_player->speed_y;
-
-        player_check_wall_collisions(c);
-        player_check_board_collisions(c);
+        // player_check_wall_collisions(c);
+        // player_check_board_collisions(c);
+        player_check_board_collisions_v2(c, p_player);
 
         // If there was a collision then calculate bounce angle
         // and don't update position
@@ -183,9 +348,13 @@ void players_update(void) {
             p_player->x.w = p_player->next_x.w;
             p_player->y.w = p_player->next_y.w;
         }
+        p_player++;
     }
+    */
+    players_update_asm();
 
-    if (gameinfo.sprites_enabled) players_redraw_sprites();
+    if (gameinfo.sprites_enabled) players_redraw_sprites_asm();
+    // if (gameinfo.sprites_enabled) players_redraw_sprites();
 }
 
 

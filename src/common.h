@@ -84,6 +84,8 @@
 // Min/Max are screen borders less sprite width
 #define SPRITE_WIDTH  8u
 #define SPRITE_HEIGHT 8u
+#define _SPRITE_WIDTH  8
+#define _SPRITE_HEIGHT 8
 
 #define PLAYER_MIN_X_U8 (0u)
 #define PLAYER_MAX_X_U8 (DEVICE_SCREEN_PX_WIDTH - SPRITE_WIDTH)
@@ -114,15 +116,19 @@
 
 
 typedef struct player_t {
-    fixed x;
-    fixed y;
-    fixed next_x;
-    fixed next_y;
-    int16_t speed_x;
-    int16_t speed_y;
     uint8_t angle;
-    bool bounce_x;
-    bool bounce_y;
+
+    fixed   y;
+    int16_t speed_y;
+    fixed   next_y;
+    bool    bounce_y;
+
+    fixed   x;
+    int16_t speed_x;
+    fixed   next_x;
+    bool    bounce_x;
+
+
 } player_t;
 // 
 

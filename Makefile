@@ -96,6 +96,9 @@ CFLAGS += -DCART_$(CART_TYPE)
 # Add include path for type of flash cart if enabled
 CFLAGS += -Wf-I"$(CART_TYPE_DIR)/"
 
+# Higher optimization setting for compiler
+# Can save maybe 1k (allocs=100000) to 2K(allocs=1000000) cycles in the C version
+# CFLAGS += -Wf--max-allocs-per-node1000000
 
 
 # You can set the name of the ROM file here
