@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// #define DEBUG_ENABLED
+// #define DEBUG_ENABLED_TILES
 
-#define DEBUG_FIXED_RUN_TIME  120u
+// #define DEBUG_FIXED_RUN_TIME  120u
 
 // Optional periodic auto-save
 // Disabled since this can cause a big cpu spike per frame due to large memcopy.

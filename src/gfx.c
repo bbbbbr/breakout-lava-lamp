@@ -9,7 +9,7 @@
 
 const uint8_t bg_tile_patterns[] = {
 
-#ifndef DEBUG_ENABLED
+#ifndef DEBUG_ENABLED_TILES
     // 0,  White
     0x00u, 0x00u,
     0x00u, 0x00u,
@@ -50,7 +50,7 @@ const uint8_t bg_tile_patterns[] = {
     0xFFu, 0xFFu,
     0xFFu, 0xFFu,
 
-#else // (DEBUG_ENABLED)
+#else // (DEBUG_ENABLED_TILES)
 // Grid Style
     // 0,  White
     0xFFu, 0x00u,
@@ -91,7 +91,7 @@ const uint8_t bg_tile_patterns[] = {
     0x7Eu, 0xFFu,
     0x7Eu, 0xFFu,
     0x00u, 0xFFu,
-#endif // (DEBUG_ENABLED)
+#endif // (DEBUG_ENABLED_TILES)
 };
 
 
