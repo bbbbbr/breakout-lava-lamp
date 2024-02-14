@@ -8,6 +8,7 @@ bool player_board_check_xy(uint8_t x, uint8_t y, uint8_t player_team_col);
 void player_check_board_collisions(uint8_t player_id);
 void player_check_wall_collisions(uint8_t player_id);
 void players_update(void);
+void players_update_v5(void);
 void players_reset(void);
 
 #endif // __PLAYERS_H

@@ -96,11 +96,153 @@ bool player_board_check_xy(uint8_t x, uint8_t y, uint8_t player_team_col) {
     return collision;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+// V5
+
+uint16_t board_index_v5;  // Faster with a global than stack local
+uint8_t players_count_v5;
+
+void players_update_v5(void) {
+
+    players_count_v5 = gameinfo.player_count;
+    player_t * p_player = &gameinfo.players[0];
+
+    for (uint8_t c = 0; c < players_count_v5; c++) {
+
+        uint8_t player_team_color = c & PLAYER_TEAMS_MASK;
+        board_update_count = 0;
+
+        // Calculate next position (bounce flags get reset in test code)
+        p_player->next_x.w = p_player->x.w + p_player->speed_x;
+        p_player->next_y.w = p_player->y.w + p_player->speed_y;
+
+
+        // Check Wall Collisions (out of bounds)
+
+            // Check Horizontal movement
+            if (p_player->next_x.h > PLAYER_MAX_X_U8) {
+                p_player->bounce_x = true;
+            } else
+                p_player->bounce_x = false;
+
+            // Check Vertical movement
+            if (p_player->next_y.h > PLAYER_MAX_Y_U8) {
+                p_player->bounce_y = true;
+            } else
+                p_player->bounce_y = false;
+
+
+        // Check board collisions
+
+            // Check Horizontal movement (New X & Current Y in order to avoid false triggers on Y)
+            // Test separately here since collision check also updates board tile color
+            if ((p_player->speed_x != 0) && (p_player->bounce_x == false)) {
+
+                // Faster with the stack local vars instead of a compounded statement with index calc
+                uint8_t test_next_x = (p_player->speed_x > 0) ? PLAYER_RIGHT(p_player->next_x.h) : PLAYER_LEFT(p_player->next_x.h);
+                // TODO: if ((p_player->speed_x > 0) && (p_player->y.h & 0x07u)) // Move to right tile if needed
+                uint8_t test_y = PLAYER_TOP(p_player->y.h);
+
+                board_index_v5 = (test_next_x) + ((test_y) * BOARD_BUF_W);
+
+               if (gameinfo.board[board_index_v5] != player_team_color) {
+                    // Don't update the board itself here since it needs to remain unmodified
+                    // until both Horizontal and Vertical testing is done, so queue an update
+                    board_update_queue[board_update_count++] = board_index_v5;
+                    // OPTIONAL: queue a tile draw instead of handling immediately
+                    set_vram_byte(_SCRN0 + board_index_v5, player_team_color);
+                    p_player->bounce_x = true;
+                }
+
+                // Only check Bottom Right if ball spans more than 2 tiles
+                // (i.e is not evenly aligned on grid boundary with x % 8 == 0)
+                if (p_player->y.h & 0x07u) {
+                    // Next Tile Row on board
+                    board_index_v5 += BOARD_BUF_W;
+
+                   if (gameinfo.board[board_index_v5] != player_team_color) {
+                        board_update_queue[board_update_count++] = board_index_v5;
+                        set_vram_byte(_SCRN0 + board_index_v5, player_team_color);
+                        p_player->bounce_x = true;
+                    }
+                }
+            }
+
+            // Check Vertical movement (New Y & Current X in order to avoid false triggers on X)
+            if ((p_player->speed_y != 0) && (p_player->bounce_y == false)) {
+
+                uint8_t test_x = PLAYER_LEFT(p_player->x.h);
+                uint8_t test_next_y = (p_player->speed_y > 0) ? PLAYER_BOTTOM(p_player->next_y.h) : PLAYER_TOP(p_player->next_y.h);
+
+                board_index_v5 = ( test_x) + (( test_next_y) * BOARD_BUF_W);
+
+               if (gameinfo.board[board_index_v5] != player_team_color) {
+                    // Don't update the board itself here since it needs to remain unmodified
+                    // until both Horizontal and Vertical testing is done, so queue an update
+                    board_update_queue[board_update_count++] = board_index_v5;
+                    // OPTIONAL: queue a tile draw instead of handling immediately
+                    set_vram_byte(_SCRN0 + board_index_v5, player_team_color);
+                    p_player->bounce_y = true;
+                }
+
+                // Only check Right side if ball spans more than 2 tiles
+                // (i.e is not evenly aligned on grid boundary with x % 8 == 0)
+                if (p_player->x.h & 0x07u) {
+                    // Next Tile Column on board
+                    board_index_v5 ++;
+
+                   if (gameinfo.board[board_index_v5] != player_team_color) {
+                        board_update_queue[board_update_count++] = board_index_v5;
+                        set_vram_byte(_SCRN0 + board_index_v5, player_team_color);
+                        p_player->bounce_y = true;
+                    }
+                }
+            }
+
+
+            // Apply queued board updates
+            while (board_update_count) {
+                gameinfo.board[ board_update_queue[--board_update_count] ] = player_team_color;
+            }
+
+//////////////////////////
+
+        // If there was a collision then calculate bounce angle
+        // and don't update position
+        if (p_player->bounce_x || p_player->bounce_y) {
+
+            if (p_player->bounce_x)
+                p_player->angle = (uint8_t)(ANGLE_TO_8BIT(360) - p_player->angle);
+
+            if (p_player->bounce_y)
+                p_player->angle = (uint8_t)(ANGLE_TO_8BIT(180) - p_player->angle);
+
+            // Slightly perturb the player angle if there was a collision
+            p_player->angle = (uint8_t)(p_player->angle + (int8_t)(rand() & 0x03u) - 1);
+            // player_recalc_movement(c);
+
+                p_player->speed_x = (int16_t)SIN(p_player->angle);
+                // Flip Y direction since adding positive values moves further down the screen
+                p_player->speed_y = (int16_t)COS(p_player->angle) * -1;
+
+        } else {
+            // Otherwise update position to new location
+            // Apply the new delta movement
+            p_player->x.w = p_player->next_x.w;
+            p_player->y.w = p_player->next_y.w;
+        }
+        p_player++;
+    }
+}
+
+
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 
 // V4
-
+/*
 uint16_t board_index_v4;
 
 void player_check_board_collisions_v4(uint8_t player_id, player_t * p_player) {
@@ -437,9 +579,9 @@ void player_check_board_collisions_v3(uint8_t player_id, player_t * p_player) {
 }
 
 
+*/
 
-
-
+/*
 /////////////////////////////////////////////////////////////////////////////
 
 // V2
@@ -698,30 +840,30 @@ EMU_printf("  px= %d, py= %d", (uint16_t)p_player->next_x.h, (uint16_t)p_player-
         // xx if (collide & (COL_LL | COL_LR))
         //  xx   p_player->bounce_y = true;
     }
-/*
-    if (p_player->speed_x > 0) {
-        // Right moving right
-        if (collide & (COL_UR | COL_LR))
-            p_player->bounce_x = true;
-    }
-    else if (p_player->speed_x < 0) {
-        // Left edge moving left
-        if (collide & (COL_UL | COL_LL))
-            p_player->bounce_x = true;
-    }
 
-    if (p_player->speed_y > 0) {
-        // Top moving up
-        if (collide & (COL_UL | COL_UR))
-            p_player->bounce_y = true;
-    }
-    else if (p_player->speed_y < 0) {
-        // Bottom moving left
-        if (collide & (COL_LL | COL_LR))
-            p_player->bounce_y = true;
-    }
-*/}
+    // if (p_player->speed_x > 0) {
+    //     // Right moving right
+    //     if (collide & (COL_UR | COL_LR))
+    //         p_player->bounce_x = true;
+    // }
+    // else if (p_player->speed_x < 0) {
+    //     // Left edge moving left
+    //     if (collide & (COL_UL | COL_LL))
+    //         p_player->bounce_x = true;
+    // }
 
+    // if (p_player->speed_y > 0) {
+    //     // Top moving up
+    //     if (collide & (COL_UL | COL_UR))
+    //         p_player->bounce_y = true;
+    // }
+    // else if (p_player->speed_y < 0) {
+    //     // Bottom moving left
+    //     if (collide & (COL_LL | COL_LR))
+    //         p_player->bounce_y = true;
+    // }
+}
+*/
 
 ///////////////////////////////////////////
 
@@ -773,10 +915,14 @@ void player_check_wall_collisions(uint8_t player_id) {
     // Check Horizontal movement
     if (p_player->next_x.h > PLAYER_MAX_X_U8)
         p_player->bounce_x = true;
+    else
+        p_player->bounce_x = false;
 
     // Check Vertical movement
     if (p_player->next_y.h > PLAYER_MAX_Y_U8)
         p_player->bounce_y = true;
+    else
+        p_player->bounce_y = false;
 }
 
 
@@ -793,11 +939,12 @@ void players_update(void) {
         p_player->next_x.w = p_player->x.w + p_player->speed_x;
         p_player->next_y.w = p_player->y.w + p_player->speed_y;
 
-        // player_check_wall_collisions(c);
-        // player_check_board_collisions(c);
-        // player_check_board_collisions_v2(c, p_player);
-        // player_check_board_collisions_v3(c, p_player);
-        player_check_board_collisions_v4(c, p_player);
+        player_check_wall_collisions(c);
+        player_check_board_collisions(c);
+
+                // player_check_board_collisions_v2(c, p_player);
+                // player_check_board_collisions_v3(c, p_player);
+                // player_check_board_collisions_v4(c, p_player);
 
         // If there was a collision then calculate bounce angle
         // and don't update position

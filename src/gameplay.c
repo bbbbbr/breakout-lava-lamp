@@ -160,7 +160,8 @@ void game_run(void) {
         }
 
         if (!paused) {
-            players_update();
+            // players_update();
+            players_update_v5();
             // players_update_asm();
 
             // Redraw the sprites if needed
