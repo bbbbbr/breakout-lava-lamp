@@ -27,16 +27,16 @@ extern uint16_t board_update_queue[PLAYER_TEAMS_COUNT];
 extern uint8_t board_update_count;
 
 
-
-void players_redraw_sprites_asm(void) __naked {
+// TODO: Maybe inline this
+void players_redraw_sprites_asm(void) NAKED {
       __asm \
 
     _GINFO_OFSET_PLAYER_COUNT = 6  // ; location of (uint8_t) .player_count
     _GINFO_OFSET_PLAYERS      = 17 // ; start of (player_t) .players[N]
 
-    _PLAYER_TYPE_Y_HI_OFFSET      = 2 
+    _PLAYER_TYPE_Y_HI_OFFSET      = 2
 
-    _PLAYER_TYPE_X_HI_OFFSET      = 9 
+    _PLAYER_TYPE_X_HI_OFFSET      = 9
 
 
     _PLAYER_TYPE_Y_TO_X_INCR      = (_PLAYER_TYPE_X_HI_OFFSET - _PLAYER_TYPE_Y_HI_OFFSET)
@@ -58,12 +58,12 @@ void players_redraw_sprites_asm(void) __naked {
     ld  e, #_PLAYER_TYPE_Y_TO_X_INCR
 
     ._redraw_sprites_loop:
-        
+
         // ; Copy sprite Y position with offset
         ld  a, (hl)
         add a, #DEVICE_SPRITE_PX_OFFSET_Y
         ld  (bc), a
-        
+
         // ; Advance to X OAM slot
         inc bc
 
@@ -104,16 +104,18 @@ void players_redraw_sprites_asm(void) __naked {
 
 
 
-uint16_t g_update_cur_x;
-uint16_t g_update_cur_y;
-uint16_t g_update_next_x;
-uint16_t g_update_next_y;
-uint8_t g_update_player_idx;
+uint16_t g_player_cur_x;
+uint16_t g_player_cur_y;
+uint16_t g_player_next_x;
+uint16_t g_player_next_y;
+uint8_t  g_player_speed_neg_x;
+uint8_t  g_player_speed_neg_y;
+uint8_t g_player_idx;
 
-void players_update_asm(void) __naked {
+void players_update_asm(void) NAKED {
       __asm \
 
-    _PLAYER_MAX_X_U8 = (DEVICE_SCREEN_WIDTH * 8) - _SPRITE_WIDTH  
+    _PLAYER_MAX_X_U8 = (DEVICE_SCREEN_WIDTH * 8) - _SPRITE_WIDTH
     _PLAYER_MAX_Y_U8 = (DEVICE_SCREEN_HEIGHT * 8) - _SPRITE_HEIGHT
     _GINFO_OFSET_PLAYER_COUNT = 6  // ; location of (uint8_t) .player_count
     _GINFO_OFSET_PLAYERS      = 17 // ; start of (player_t) .players[N]
@@ -122,12 +124,12 @@ void players_update_asm(void) __naked {
     _PLAYER_TYPE_Y_ANGLE          = 0
 
     _PLAYER_TYPE_Y_OFFSET         = 1
-    _PLAYER_TYPE_Y_HI_OFFSET      = 2 
+    _PLAYER_TYPE_Y_HI_OFFSET      = 2
     _PLAYER_TYPE_NEXT_Y_OFFSET    = 5
     _PLAYER_TYPE_NEXT_Y_HI_OFFSET = 6
 
     _PLAYER_TYPE_X_OFFSET         = 8
-    _PLAYER_TYPE_X_HI_OFFSET      = 9 
+    _PLAYER_TYPE_X_HI_OFFSET      = 9
     _PLAYER_TYPE_NEXT_X_OFFSET    = 12
     _PLAYER_TYPE_NEXT_X_HI_OFFSET = 13
 
@@ -140,7 +142,7 @@ void players_update_asm(void) __naked {
     // == Set up Counter for players ==
     // ; players_count = gameinfo.player_count;
     ld  a, (#_gameinfo + #_GINFO_OFSET_PLAYER_COUNT) // ; Counter max: gameinfo.player_count
-    ld  (#_g_update_player_idx), a
+    ld  (#_g_player_idx), a
 
 
     // Load Array of player_t structs
@@ -151,28 +153,32 @@ void players_update_asm(void) __naked {
     // == Cache current Y postion and player pointer ==
     push hl  // ; points to .y.l
     inc hl
-    ld  a, (hl+) // ; save .y.h -> g_update_y
-    ld  (#_g_update_cur_y + 1), a
+    ld  a, (hl+) // ; save .y.h -> g_player_y
+    ld  (#_g_player_cur_y + 1), a
 
 
     // == Calc next Y position + Wall Bounce test ==
     // ; HL points to .speed_y
     // ; p_player->next_y.w += p_player->speed_y;
-    ld  a, (hl+) // ; load .speed_y
+    ld  a, (hl+)  // ; load .speed_y.l
     ld  c, a
-    ld  a, (hl+)
+    ld  a, (hl+)  // ; load .speed_y.h
     ld  b, a
-  
+
+        // Check and save Y direction via sign bit for int16_t
+        and a, #0x80
+        ld  (#_g_player_speed_neg_y), a
+
         // ; .next_y.w(BC) += .speed_y;
         ld  a, c
         add (hl)
         ld  (hl+), a
-        ld  (#_g_update_next_y), a // ; Cache next_y.l
+        ld  (#_g_player_next_y), a // ; Cache next_y.l
 
         ld  a, b
         adc (hl)
         ld  (hl+), a
-        ld  (#_g_update_next_y + #1), a // ; Cache next_y.h
+        ld  (#_g_player_next_y + #1), a // ; Cache next_y.h
         // A has next_y.h
 
         // ; == Wall bounce test for Y axis ==
@@ -188,8 +194,8 @@ void players_update_asm(void) __naked {
     // == Cache current X postion ==
     // ; HL points to .x
     inc hl
-    ld  a, (hl+) // ; save .x.h -> g_update_x
-    ld  (#_g_update_cur_x + 1), a
+    ld  a, (hl+) // ; save .x.h -> g_player_x
+    ld  (#_g_player_cur_x + 1), a
 
     // == Calc next X position + Wall Bounce test ==
     // ; HL points to .speed_x
@@ -198,17 +204,21 @@ void players_update_asm(void) __naked {
     ld  c, a
     ld  a, (hl+)
     ld  b, a
-  
+
+        // Check and save Y direction via sign bit for int16_t
+        and a, #0x80
+        ld  (#_g_player_speed_neg_x), a
+
         // ; .next_x.w(BC) += .speed_x;
         ld  a, c
         add (hl)
         ld  (hl+), a
-        ld  (#_g_update_next_x), a // ; Cache next_x.l
+        ld  (#_g_player_next_x), a // ; Cache next_x.l
 
         ld  a, b
         adc (hl)
         ld  (hl+), a
-        ld  (#_g_update_next_x + #1), a // ; Cache next_x.h
+        ld  (#_g_player_next_x + #1), a // ; Cache next_x.h
         // A has next_x.h
 
 
@@ -225,19 +235,55 @@ void players_update_asm(void) __naked {
 
 
 
+    // ; == Check Board Collision ==
 
-        // TODO        
+        // // Check Horizontal movement (New X & Current Y in order to avoid false triggers on Y)
+        // // Test separately here since collision check also updates board tile color
+        // if (p_player->speed_x != 0) {
+        //     uint8_t test_x = (p_player->speed_x > 0) ? PLAYER_RIGHT(nx) : PLAYER_LEFT(nx);
+        //
+        //     if (player_board_check_xy(test_x, PLAYER_TOP(py),    player_team_color)) p_player->bounce_x = true;
+        //     if (player_board_check_xy(test_x, PLAYER_BOTTOM(py), player_team_color)) p_player->bounce_x = true;
+        // }
+
+/*
+        // == Check Horizontal movement ==
+        // (Next X & Current Y in order to avoid false triggers on Y)
+        // Test separately here since collision check also updates board tile color
+        ld  a, #(g_player_speed_neg_y)
+        or  a
+        jr  NZ ._player_test_board_collide_right
+
+        ._player_test_board_collide_left:
+            // ; Test Top-Left:
+            // ; Test Bottom-Left
+            jr
+
+        ._player_test_board_collide_right:
+
+        ._player_test_board_horiz_done
+
+
+*/
+
+
+    // TODO
         // ; Revert position update if bounce happened
-        // ld  a, (#_g_update_cur_x + 1)
-        // ld  a, (#_g_update_cur_y + 1)
+        // ld  a, (#_g_player_cur_x + 1)
+        // ld  a, (#_g_player_cur_y + 1)
+
+
+
     // ; TODO: optimize
+
+
 
     // ; == Store updated X, Y values : TODO: if no bounce detected
     pop hl  // ; Restore pointer for player.y.l
 
-    ld  a, (#_g_update_next_y)
+    ld  a, (#_g_player_next_y)
     ld  (hl+), a
-    ld  a, (#_g_update_next_y + #1)
+    ld  a, (#_g_player_next_y + #1)
     ld  (hl+), a
 
     inc hl  // ; Advance to player.x.l
@@ -246,9 +292,9 @@ void players_update_asm(void) __naked {
     inc hl
     inc hl
 
-    ld  a, (#_g_update_next_x)
+    ld  a, (#_g_player_next_x)
     ld  (hl+), a
-    ld  a, (#_g_update_next_x + #1)
+    ld  a, (#_g_player_next_x + #1)
     ld  (hl+), a
 
     // ; TODO: optimize increment
@@ -261,9 +307,9 @@ void players_update_asm(void) __naked {
     inc hl  // ; Advance to Next player.y.l
 
     // ; == Update loop counter ==
-    ld  a, (#_g_update_player_idx)
+    ld  a, (#_g_player_idx)
     dec a
-    ld  (#_g_update_player_idx), a
+    ld  (#_g_player_idx), a
     jr  NZ, ._players_main_loop
 
     pop de // 3

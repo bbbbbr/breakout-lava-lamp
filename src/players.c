@@ -10,6 +10,7 @@
 #include "save_and_restore.h"
 
 #include "gameboard.h"
+#include "players_asm.h"
 
 // #define EMU_PRINT_ON
 
@@ -779,10 +780,6 @@ void player_check_wall_collisions(uint8_t player_id) {
 }
 
 
-void players_update_asm(void) __naked;
-void players_redraw_sprites_asm(void) __naked;
-
-
 uint8_t players_count;
 void players_update(void) {
 
@@ -824,11 +821,6 @@ void players_update(void) {
         }
         p_player++;
     }
-
-    // players_update_asm();
-
-    if (gameinfo.sprites_enabled) players_redraw_sprites_asm();
-    // if (gameinfo.sprites_enabled) players_redraw_sprites();
 }
 
 

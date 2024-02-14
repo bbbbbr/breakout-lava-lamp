@@ -11,6 +11,7 @@
 
 #include "gameboard.h"
 #include "players.h"
+#include "players_asm.h"
 
 
 
@@ -158,8 +159,14 @@ void game_run(void) {
             select_held_count = 0u;
         }
 
-        if (!paused)
+        if (!paused) {
             players_update();
+            // players_update_asm();
+
+            // Redraw the sprites if needed
+            if (gameinfo.sprites_enabled) players_redraw_sprites_asm();
+            // if (gameinfo.sprites_enabled) players_redraw_sprites();
+        }
 
         // Turn sprites back on after they've had a chance to update in players_update()
         // so they don't visibly pop from the old location to new
