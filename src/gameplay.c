@@ -148,7 +148,8 @@ void game_run(void) {
             }
         }
         else {
-            vsync();
+           vsync();
+
             // If SELECT was just short-pressed use it to toggle sprites on/off
             if (KEY_RELEASED(J_SELECT)) {
                 if (select_held_count < SPEEDUP_SELECT_HELD_THRESHOLD) {
@@ -158,6 +159,8 @@ void game_run(void) {
                  // Reset counter when button is released
             select_held_count = 0u;
         }
+
+        players_apply_queued_vram_updates();
 
         if (!paused) {
             // players_update();

@@ -26,9 +26,15 @@
 #define PLAYER_TOP(py)    ((py                     ) / BOARD_GRID_SZ)
 #define PLAYER_BOTTOM(py) ((py + (SPRITE_HEIGHT - 1)) / BOARD_GRID_SZ)
 
-
-uint16_t board_update_queue[PLAYER_TEAMS_COUNT];
+// Absolute worst case update queue scenario is each ball spans 4 separate tiles (2x2)
+// In practice max is more like ~115 when starting out with 32 balls, so some RAM is wasted
+#define UPDATE_QUEUE_MAX_SZ  (PLAYER_COUNT_MAX  * 4)
+uint16_t board_update_queue[UPDATE_QUEUE_MAX_SZ];
 uint8_t board_update_count;
+uint8_t board_update_count_cur_player;
+
+
+
 
 // ====== PLAYERS ======
 
@@ -112,10 +118,15 @@ void players_update_v5(void) {
     players_count_v5 = gameinfo.player_count;
     player_t * p_player = &gameinfo.players[0];
 
+    board_update_count = 0;
     for (uint8_t c = 0; c < players_count_v5; c++) {
 
+        // Create local offset for current ball index in update queue
+        // This allows applying board updates right away but defering
+        // vram updates until after frame calc is done
+        board_update_count_cur_player = board_update_count;
+
         uint8_t player_team_color = c & PLAYER_TEAMS_MASK;
-        board_update_count = 0;
 
         // Calculate next position (bounce flags get reset in test code)
         p_player->next_x.w = p_player->x.w + p_player->speed_x;
@@ -143,16 +154,13 @@ void players_update_v5(void) {
 
                 // Faster with the stack local vars instead of a compounded statement with index calc
                 uint8_t test_next_x = (p_player->speed_x > 0) ? PLAYER_RIGHT(p_player->next_x.h) : PLAYER_LEFT(p_player->next_x.h);
-                // TODO: if ((p_player->speed_x > 0) && (p_player->y.h & 0x07u)) // Move to right tile if needed
                 uint8_t test_y = PLAYER_TOP(p_player->y.h);
-
                 board_index_v5 = (test_next_x) + ((test_y) * BOARD_BUF_W);
 
                if (gameinfo.board[board_index_v5] != player_team_color) {
                     // Don't update the board itself here since it needs to remain unmodified
                     // until both Horizontal and Vertical testing is done, so queue an update
                     board_update_queue[board_update_count++] = board_index_v5;
-                    // OPTIONAL: queue a tile draw instead of handling immediately
                     collide_v5 |= COLLIDE_X;
                 }
 
@@ -181,7 +189,6 @@ void players_update_v5(void) {
                     // Don't update the board itself here since it needs to remain unmodified
                     // until both Horizontal and Vertical testing is done, so queue an update
                     board_update_queue[board_update_count++] = board_index_v5;
-                    // OPTIONAL: queue a tile draw instead of handling immediately
                     collide_v5 |= COLLIDE_Y;
                 }
 
@@ -198,12 +205,12 @@ void players_update_v5(void) {
                 }
             }
 
-
-            // Apply queued board updates
-            while (board_update_count) {
-                uint16_t idx = board_update_queue[--board_update_count];
+            // Apply queued board updates to board only, vram updates are deferred
+            // until collision tests are over for the frame in: player_apply_queued_vram_updates()
+            uint16_t idx;
+            while (board_update_count_cur_player != board_update_count) {
+                idx = board_update_queue[board_update_count_cur_player++];
                 gameinfo.board[ idx ] = player_team_color;
-                set_vram_byte(_SCRN0 + idx, player_team_color);
             }
 
 //////////////////////////
@@ -243,11 +250,20 @@ void players_update_v5(void) {
         }
         p_player++;
     }
+
 }
 
 
-
-
+// Applies the board tile color changes to the screen (tilemap)
+// which were queued during the frame
+// Optimize: Using 2 arrays is probably slower than packing the 3 bytes into one array
+void players_apply_queued_vram_updates(void) {
+    for (uint8_t queued_idx = 0; queued_idx < board_update_count; queued_idx++) {
+        uint16_t idx = board_update_queue[queued_idx];
+        uint8_t player_team_color = gameinfo.board[idx];
+        set_vram_byte(_SCRN0 + idx, player_team_color);
+    }
+}
 
 /////////////////////////////////////////////////////////////////////////////
 
