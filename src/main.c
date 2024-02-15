@@ -16,6 +16,10 @@
 
 uint8_t gamestate; // main loop state
 
+void vblank_counter(void) {
+    vsync_count++;
+}
+
 static void main_init(void) {
     #if defined(CART_mbc5) || defined(CART_mbc5_rumble)
         // Initialize MBC bank defaults
@@ -37,6 +41,9 @@ static void main_init(void) {
     sine_tables_init();
 
     savedata_load();
+    CRITICAL {
+        add_VBL(vblank_counter);
+    }
 }
 
 void main(void){

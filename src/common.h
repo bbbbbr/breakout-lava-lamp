@@ -163,6 +163,7 @@ typedef struct gameinfo_t {
 } gameinfo_t;
 
 extern gameinfo_t gameinfo;
+extern uint8_t vsync_count;
 
 // Old method, look up color based on team (now just use player id directly)
 //

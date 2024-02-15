@@ -118,6 +118,7 @@ void game_run(void) {
             frames_to_run--;
         #endif
 
+        vsync_count = 0u;
 
         UPDATE_KEYS();
         keys_ticked = GET_KEYS_TICKED(J_ANY);
@@ -139,16 +140,34 @@ void game_run(void) {
                 savedata_save();
         }
 
-        // Sprite Toggle and Speed Up
+
+        // Run position and collision updates
+        if (!paused) {
+            // players_update();
+            players_update_v5();
+            // players_update_asm();
+
+            // Redraw the sprites if needed
+            if (gameinfo.sprites_enabled) players_redraw_sprites_asm();
+            // if (gameinfo.sprites_enabled) players_redraw_sprites();
+        }
+        players_apply_queued_vram_updates();
+
+
+        // Sprite Toggle and Speed Up (skips vsync)
         if (KEY_PRESSED(J_SELECT)) {
             // Skip Vsync if SELECT is pressed for long enough (Temporary Speed Up)
             if (select_held_count < SPEEDUP_SELECT_HELD_THRESHOLD) {
                 select_held_count++;
-                vsync();
+                // Don't vsync if this frame took too long and ran to next frame
+                if (!vsync_count)
+                    vsync();
             }
         }
         else {
-           vsync();
+            // Don't vsync if this frame took too long and ran to next frame
+            if (!vsync_count)
+               vsync();
 
             // If SELECT was just short-pressed use it to toggle sprites on/off
             if (KEY_RELEASED(J_SELECT)) {
@@ -158,18 +177,6 @@ void game_run(void) {
             }
                  // Reset counter when button is released
             select_held_count = 0u;
-        }
-
-        players_apply_queued_vram_updates();
-
-        if (!paused) {
-            // players_update();
-            players_update_v5();
-            // players_update_asm();
-
-            // Redraw the sprites if needed
-            if (gameinfo.sprites_enabled) players_redraw_sprites_asm();
-            // if (gameinfo.sprites_enabled) players_redraw_sprites();
         }
 
         // Turn sprites back on after they've had a chance to update in players_update()
