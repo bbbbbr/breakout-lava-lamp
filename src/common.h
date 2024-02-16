@@ -121,13 +121,10 @@ typedef struct player_t {
     fixed   y;
     int16_t speed_y;
     fixed   next_y;
-    bool    bounce_y;
 
     fixed   x;
     int16_t speed_x;
     fixed   next_x;
-    bool    bounce_x;
-
 
 } player_t;
 // 

@@ -36,7 +36,7 @@ uint8_t g_board_update_count_cur_player;
 // Global Player update loop vars
 // Resulting codegen is faster with a global than stack local or static
 uint16_t g_board_index;
-uint8_t players_count;
+uint8_t g_players_count;
 uint8_t g_collisions;
 
 #define COLLIDE_NONE  0x00u
@@ -48,8 +48,78 @@ uint8_t g_collisions;
 #define CHECK_BOARD_SPAN_2_TILES(pixel_loc) (pixel_loc & 0x07u)
 
 
+void players_redraw_sprites_asm(void) NAKED PRESERVES_REGS(a, b, c, d, e, h, l) {
+      __asm \
 
-// ====== PLAYERS ======
+    _GINFO_OFSET_PLAYER_COUNT = 6  // ; location of (uint8_t) .player_count
+    _GINFO_OFSET_PLAYERS      = 17 // ; start of (player_t) .players[N]
+    // ; Offset indexes into the player struct
+    _PLAYER_TYPE_Y_HI_OFFSET      = 2 // ; .y.h
+    _PLAYER_TYPE_X_HI_OFFSET      = 8 // ; .x.h
+
+
+    _PLAYER_TYPE_Y_TO_X_INCR      = (_PLAYER_TYPE_X_HI_OFFSET - _PLAYER_TYPE_Y_HI_OFFSET)
+
+    push af
+    push hl
+    push bc
+    push de
+
+._redraw_sprites_loop_init:
+    // == Set up Counter for players ==
+    // ; players_count = gameinfo.player_count;
+    ld  a, (#_gameinfo + #_GINFO_OFSET_PLAYER_COUNT) // ; Counter max: gameinfo.player_count
+    ld  d, a
+
+    ld  bc, #_shadow_OAM
+    // ; Start at player[0].y.h
+    ld  hl, #_gameinfo + #(_GINFO_OFSET_PLAYERS  + _PLAYER_TYPE_Y_HI_OFFSET) // ; &gameinfo.players[0].y.h
+    ld  e, #_PLAYER_TYPE_Y_TO_X_INCR
+
+    ._redraw_sprites_loop:
+
+        // ; Copy sprite Y position with offset
+        ld  a, (hl)
+        add a, #DEVICE_SPRITE_PX_OFFSET_Y
+        ld  (bc), a
+
+        // ; Advance to X OAM slot
+        inc bc
+
+        // Advance to Player X position
+        ld  a, d
+        ld  d, #0
+        add hl, de
+        ld  d, a
+
+        // ; Copy sprite X position with offset
+        ld  a, (hl+)  // ; HL increment to allow reuse of E for HL incrementing to next player (since it's +8 instead of +7)
+        add a, #DEVICE_SPRITE_PX_OFFSET_X
+        ld  (bc), a
+
+        // ; Advance to start of next OAM slot
+        inc bc
+        inc bc
+        inc bc
+
+        // Advance to next player[n].y.h
+        ld  a, d
+        ld  d, #0
+        add hl, de
+        ld  d, a
+
+        dec d
+        jr  NZ, ._redraw_sprites_loop
+
+    pop de
+    pop bc
+    pop hl
+    pop af
+
+    ret
+   __endasm;
+}
+
 
 void players_redraw_sprites(void) {
 
@@ -70,12 +140,6 @@ void player_recalc_movement(uint8_t idx) {
     gameinfo.players[idx].speed_x = (int16_t)SIN(t_angle);
     // Flip Y direction since adding positive values moves further down the screen
     gameinfo.players[idx].speed_y = (int16_t)COS(t_angle) * -1;
-
-    // Old version that didn't pre-calculate Angle * Speed
-    //
-    // gameinfo.players[idx].speed_x = (int16_t)SIN(t_angle) * gameinfo.speed;
-    // // Flip Y direction since adding positive values moves further down the screen
-    // gameinfo.players[idx].speed_y = (int16_t)COS(t_angle) * gameinfo.speed * -1;
 }
 
 
@@ -120,13 +184,23 @@ inline uint8_t players_check_wall_collisions(uint8_t collisions, player_t * p_pl
 }
 
 
+bool dummy_always_true = true;
+
 // Faster codegen when collisions is passed in as a local
 // even though it's an inline function
 inline uint8_t players_check_board_collisions(uint8_t collisions, uint8_t player_team_color, player_t * p_player) {
 
+    // Test separately here even if there was a wall collision
+    // since board collision check also updates board tile color which might
+    // change underneath the player due to other players
+    // if ((p_player->speed_x != 0) && (!(collisions & COLLIDE_X)) ) {
+    // if ((p_player->speed_y != 0) && (!(collisions & COLLIDE_X)) ){
+
     // Check Horizontal movement (New X & Current Y in order to avoid false triggers on Y)
-    // Test separately here since collision check also updates board tile color
-    if ((p_player->speed_x != 0) && (p_player->bounce_x == false)) {
+    //
+    // WARNING: Something about the optimizer requires the dummy test, 
+    // otherwise players_update is ~40,000 cycles slower with 32 balls. 
+    if ((p_player->speed_x != 0) && (dummy_always_true)) {
 
         // Faster with the stack local vars instead of a compounded statement with index calc
         uint8_t test_next_x = (p_player->speed_x > 0) ? PLAYER_RIGHT(p_player->next_x.h) : PLAYER_LEFT(p_player->next_x.h);
@@ -152,7 +226,10 @@ inline uint8_t players_check_board_collisions(uint8_t collisions, uint8_t player
     }
 
     // Check Vertical movement (New Y & Current X in order to avoid false triggers on X)
-    if ((p_player->speed_y != 0) && (p_player->bounce_y == false)) {
+    //
+    // WARNING: Something about the optimizer requires the dummy test, 
+    // otherwise players_update is ~40,000 cycles slower with 32 balls. 
+    if ((p_player->speed_y != 0) && (dummy_always_true)) {
 
         uint8_t test_x = PLAYER_LEFT(p_player->x.h);
         uint8_t test_next_y = (p_player->speed_y > 0) ? PLAYER_BOTTOM(p_player->next_y.h) : PLAYER_TOP(p_player->next_y.h);
@@ -183,13 +260,13 @@ inline uint8_t players_check_board_collisions(uint8_t collisions, uint8_t player
 
 // Loop through all players, update their position, test for
 // wall and board collisions and update their bounce angle/etc if needed
-void players_update_v5(void) {
+void players_update(void) {
 
-    players_count = gameinfo.player_count;
+    g_players_count = gameinfo.player_count;
     player_t * p_player = &gameinfo.players[0];
 
     g_board_update_count = 0;
-    for (uint8_t c = 0; c < players_count; c++) {
+    for (uint8_t c = 0; c < g_players_count; c++) {
 
         // Create local offset for current ball index in update queue
         // This allows applying board updates right away but defering
@@ -272,138 +349,6 @@ void players_apply_queued_vram_updates(void) {
 
 /////////////////////////////////////////////////////////////////////////////
 
-/*
-
-// Check to see if a given board tile does not match the player (collision) or matches (no collision)
-// TODO: OPTIMIZE: could inline to improve performance
-bool player_board_check_xy(uint8_t x, uint8_t y, uint8_t player_team_col) {
-    bool collision = false;
-
-    // This is a wall collision, so no tile updates
-    // Unsigned wraparound to negative is also handled by this
-    if ((x >= BOARD_DISP_W) || (y >= BOARD_DISP_H)) {
-         // Return false here since it's off the grid
-         // It's ok to do that since the player sprite is not bigger than a tile
-         // so if one edge is off a remaining corner will still get checked at the right location
-        return false;
-    }
-
-    uint16_t g_board_index = x + (y * BOARD_BUF_W);
-    if (gameinfo.board[g_board_index] != player_team_col) {
-        // Don't update the board itself here since it needs to remain unmodified
-        // until both Horizontal and Vertical testing is done, so queue an update
-        board_update_queue[board_update_count++] = g_board_index;
-        // OPTIONAL: queue a tile draw instead of handling immediately
-        set_vram_byte(_SCRN0 + g_board_index, player_team_col);
-        collision = true;
-    }
-
-    return collision;
-}
-
-
-void player_check_board_collisions(uint8_t player_id) {
-
-    board_update_count = 0;
-    player_t * p_player = &(gameinfo.players[player_id]);
-
-    uint8_t player_team_color = player_id & PLAYER_TEAMS_MASK;
-    // Old method, look up color based on team (now just use player id directly)
-    // uint8_t player_team_color = board_team_bg_colors[player_id & PLAYER_TEAMS_MASK];
-    uint8_t nx       = p_player->next_x.h;
-    uint8_t ny       = p_player->next_y.h;
-    uint8_t px       = p_player->x.h;
-    uint8_t py       = p_player->y.h;
-
-    // Check Horizontal movement (New X & Current Y in order to avoid false triggers on Y)
-    // Test separately here since collision check also updates board tile color
-    if (p_player->speed_x != 0) {
-        uint8_t test_x = (p_player->speed_x > 0) ? PLAYER_RIGHT(nx) : PLAYER_LEFT(nx);
-        if (player_board_check_xy(test_x, PLAYER_TOP(py),    player_team_color)) p_player->bounce_x = true;
-        if (player_board_check_xy(test_x, PLAYER_BOTTOM(py), player_team_color)) p_player->bounce_x = true;
-    }
-
-    // Check Vertical movement (New Y & Current X in order to avoid false triggers on X)
-    // Test separately here since collision check also updates board tile color
-    if (p_player->speed_y != 0) {
-        uint8_t test_y = (p_player->speed_y > 0) ? PLAYER_BOTTOM(ny) : PLAYER_TOP(ny);
-        if (player_board_check_xy(PLAYER_LEFT(px),  test_y, player_team_color)) p_player->bounce_y = true;
-        if (player_board_check_xy(PLAYER_RIGHT(px), test_y, player_team_color)) p_player->bounce_y = true;
-    }
-
-    // Apply queued board updates
-    while (board_update_count) {
-        gameinfo.board[ board_update_queue[--board_update_count] ] = player_team_color;
-    }
-}
-
-
-void player_check_wall_collisions(uint8_t player_id) {
-
-    player_t * p_player = &(gameinfo.players[player_id]);
-
-    // NOTE: Both checks rely on unsigned wraparound from 0
-    // to also do the less than MIN test
-
-    // Check Horizontal movement
-    if (p_player->next_x.h > PLAYER_MAX_X_U8)
-        p_player->bounce_x = true;
-    else
-        p_player->bounce_x = false;
-
-    // Check Vertical movement
-    if (p_player->next_y.h > PLAYER_MAX_Y_U8)
-        p_player->bounce_y = true;
-    else
-        p_player->bounce_y = false;
-}
-
-
-uint8_t players_count;
-void players_update(void) {
-
-
-    players_count = gameinfo.player_count;
-    player_t * p_player = &gameinfo.players[0];
-
-    for (uint8_t c = 0; c < players_count; c++) {
-
-        // Calculate next position (bounce flags get reset in test code)
-        p_player->next_x.w = p_player->x.w + p_player->speed_x;
-        p_player->next_y.w = p_player->y.w + p_player->speed_y;
-
-        player_check_wall_collisions(c);
-        player_check_board_collisions(c);
-
-                // player_check_board_collisions_v2(c, p_player);
-                // player_check_board_collisions_v3(c, p_player);
-                // player_check_board_collisions_v4(c, p_player);
-
-        // If there was a collision then calculate bounce angle
-        // and don't update position
-        if (p_player->bounce_x || p_player->bounce_y) {
-
-            if (p_player->bounce_x)
-                p_player->angle = (uint8_t)(ANGLE_TO_8BIT(360) - p_player->angle);
-
-            if (p_player->bounce_y)
-                p_player->angle = (uint8_t)(ANGLE_TO_8BIT(180) - p_player->angle);
-
-            // Slightly perturb the player angle if there was a collision
-            p_player->angle = (uint8_t)(p_player->angle + (int8_t)(rand() & 0x03u) - 1);
-            player_recalc_movement(c);
-
-        } else {
-            // Otherwise update position to new location
-            // Apply the new delta movement
-            p_player->x.w = p_player->next_x.w;
-            p_player->y.w = p_player->next_y.w;
-        }
-        p_player++;
-    }
-}
-
-*/
 
 // 2x2 board layout with players at opposite angles
 const uint8_t player_init_2x2_X[PLAYER_TEAMS_COUNT] = {
@@ -468,7 +413,6 @@ void players_reset(void) {
 
         gameinfo.players[c].next_x = gameinfo.players[c].x;
         gameinfo.players[c].next_y = gameinfo.players[c].y;
-        gameinfo.players[c].bounce_x = gameinfo.players[c].bounce_y = false;
         // This will get recalculated when players_all_recalc_movement() is called before starting
         gameinfo.players[c].speed_x = gameinfo.players[c].speed_y = 0u;
         // Clear low byte of x/y position

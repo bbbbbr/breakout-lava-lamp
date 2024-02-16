@@ -143,9 +143,7 @@ void game_run(void) {
 
         // Run position and collision updates
         if (!paused) {
-            // players_update();
-            players_update_v5();
-            // players_update_asm();
+            players_update();
 
             // Redraw the sprites if needed
             if (gameinfo.sprites_enabled) players_redraw_sprites_asm();

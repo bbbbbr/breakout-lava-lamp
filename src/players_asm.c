@@ -27,82 +27,6 @@ extern uint16_t board_update_queue[PLAYER_TEAMS_COUNT];
 extern uint8_t board_update_count;
 
 
-// TODO: Maybe inline this
-void players_redraw_sprites_asm(void) NAKED {
-      __asm \
-
-    _GINFO_OFSET_PLAYER_COUNT = 6  // ; location of (uint8_t) .player_count
-    _GINFO_OFSET_PLAYERS      = 17 // ; start of (player_t) .players[N]
-
-    _PLAYER_TYPE_Y_HI_OFFSET      = 2
-
-    _PLAYER_TYPE_X_HI_OFFSET      = 9
-
-
-    _PLAYER_TYPE_Y_TO_X_INCR      = (_PLAYER_TYPE_X_HI_OFFSET - _PLAYER_TYPE_Y_HI_OFFSET)
-
-    push af
-    push hl
-    push bc
-    push de
-
-._redraw_sprites_loop_init:
-    // == Set up Counter for players ==
-    // ; players_count = gameinfo.player_count;
-    ld  a, (#_gameinfo + #_GINFO_OFSET_PLAYER_COUNT) // ; Counter max: gameinfo.player_count
-    ld  d, a
-
-    ld  bc, #_shadow_OAM
-    // ; Start at player[0].y.h
-    ld  hl, #_gameinfo + #(_GINFO_OFSET_PLAYERS  + _PLAYER_TYPE_Y_HI_OFFSET) // ; &gameinfo.players[0].y.h
-    ld  e, #_PLAYER_TYPE_Y_TO_X_INCR
-
-    ._redraw_sprites_loop:
-
-        // ; Copy sprite Y position with offset
-        ld  a, (hl)
-        add a, #DEVICE_SPRITE_PX_OFFSET_Y
-        ld  (bc), a
-
-        // ; Advance to X OAM slot
-        inc bc
-
-        // Advance to Player X position
-        ld  a, d
-        ld  d, #0
-        add hl, de
-        ld  d, a
-
-        // ; Copy sprite X position with offset
-        ld  a, (hl+)  // ; HL increment to allow reuse of E for HL incrementing to next player (since it's +8 instead of +7)
-        add a, #DEVICE_SPRITE_PX_OFFSET_X
-        ld  (bc), a
-
-        // ; Advance to start of next OAM slot
-        inc bc
-        inc bc
-        inc bc
-
-        // Advance to next player[n].y.h
-        ld  a, d
-        ld  d, #0
-        add hl, de
-        ld  d, a
-
-        dec d
-        jr  NZ, ._redraw_sprites_loop
-
-    pop de
-    pop bc
-    pop hl
-    pop af
-
-    ret
-   __endasm;
-}
-
-
-
 
 uint16_t g_player_cur_x;
 uint16_t g_player_cur_y;
@@ -112,6 +36,9 @@ uint8_t  g_player_speed_neg_x;
 uint8_t  g_player_speed_neg_y;
 uint8_t g_player_idx;
 
+/*
+// Preserves...
+NEEDS UPDATING FOR REMOVAL OF .bounce_x/y
 void players_update_asm(void) NAKED {
       __asm \
 
@@ -234,50 +161,13 @@ void players_update_asm(void) NAKED {
 
 
 
-
-    // ; == Check Board Collision ==
-
-        // // Check Horizontal movement (New X & Current Y in order to avoid false triggers on Y)
-        // // Test separately here since collision check also updates board tile color
-        // if (p_player->speed_x != 0) {
-        //     uint8_t test_x = (p_player->speed_x > 0) ? PLAYER_RIGHT(nx) : PLAYER_LEFT(nx);
-        //
-        //     if (player_board_check_xy(test_x, PLAYER_TOP(py),    player_team_color)) p_player->bounce_x = true;
-        //     if (player_board_check_xy(test_x, PLAYER_BOTTOM(py), player_team_color)) p_player->bounce_x = true;
-        // }
-
-/*
-        // == Check Horizontal movement ==
-        // (Next X & Current Y in order to avoid false triggers on Y)
-        // Test separately here since collision check also updates board tile color
-        ld  a, #(g_player_speed_neg_y)
-        or  a
-        jr  NZ ._player_test_board_collide_right
-
-        ._player_test_board_collide_left:
-            // ; Test Top-Left:
-            // ; Test Bottom-Left
-            jr
-
-        ._player_test_board_collide_right:
-
-        ._player_test_board_horiz_done
-
-
-*/
-
-
     // TODO
-        // ; Revert position update if bounce happened
-        // ld  a, (#_g_player_cur_x + 1)
-        // ld  a, (#_g_player_cur_y + 1)
-
-
+    // ; == Check Board Collision ==
+    // ; == Apply queued board updates ==
+    // ; == Change angles and speeds if bounced ==
+    // ; Revert position update if bounce happened
 
     // ; TODO: optimize
-
-
-
     // ; == Store updated X, Y values : TODO: if no bounce detected
     pop hl  // ; Restore pointer for player.y.l
 
@@ -321,7 +211,9 @@ void players_update_asm(void) NAKED {
    __endasm;
 }
 
+*/
 
+/*
 
 // This isn't much faster than the C version
 // Most of the wait time is stalling for the right vram mode
@@ -372,3 +264,5 @@ void players_apply_queued_vram_updates_asm(void) {
         jr  .queue_loop
     __endasm;
 }
+
+*/
