@@ -10,13 +10,11 @@ The ROM can be downloaded from [itch.io](https://bbbbbr.itch.io/breakout-lava-la
 
 
 ### Save Data
-The play field will maintain state after being powered off (save to cart RAM) and can resume or start fresh after being powered on.
-
-It's best to power off while in Tile Screen Menu instead of during game play.
+The game board will be saved when starting, stopping or pausing. Once saved it will maintain state after being powered off (save to cart RAM) and can resume or start fresh after being powered on.
 
 
 #### FAQ
-Q: Will the play field ever reach a steady state?
+Q: Will the game board ever reach a steady state?
 A: In order to make the outcome more interesting (and less symmetrical) the angle of a ball gets slightly modified each time it bounces. So it should never really stabilize.
 
 
@@ -31,15 +29,15 @@ A: In order to make the outcome more interesting (and less symmetrical) the angl
 
 ### Title Screen Menu
 Actions:
-- Continue: Resume the previous play field that was in progress
-- Standard: Start a new play field with the standard, fixed random seed value
-- Random: Start a new play field with a random seed value derived from user button presses
+- Continue: Resume the previous game board that was in progress
+- Standard: Start a new game board with the standard, fixed random seed value
+- Random: Start a new game board with a random seed value derived from user button press timing
 
 Controls:
 - D-Pad: Moves cursor on title screen
 - Start/A/B: Exits Title Screen
 
-### Game Play Field Title
+### During Game Board Updates
 Controls:
 - A/B: Return to Title Screen Menu
 - Select:
