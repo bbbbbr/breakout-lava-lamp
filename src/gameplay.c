@@ -152,6 +152,7 @@ void game_run(void) {
             // if (gameinfo.sprites_enabled) players_redraw_sprites();
         }
         players_apply_queued_vram_updates();
+        // players_apply_queued_vram_updates_asm();
 
 
         // Sprite Toggle and Speed Up (skips vsync)

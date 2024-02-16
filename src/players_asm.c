@@ -320,3 +320,55 @@ void players_update_asm(void) NAKED {
     ret
    __endasm;
 }
+
+
+
+// This isn't much faster than the C version
+// Most of the wait time is stalling for the right vram mode
+void players_apply_queued_vram_updates_asm(void) {
+    __asm \
+
+
+    ld  bc, #_board_update_queue   // ; board_update_queue[]
+    ld  a, (#_g_board_update_count)
+    inc a
+    // ; DE is scratch / pass u16 param
+
+    .queue_loop:
+
+        // Check for loop exit
+        dec  a
+        ret  Z
+        push af
+
+        // ; Load next address/index from queue into DE
+        ld   a, (bc)
+        ld   e, a
+        inc  bc
+
+        ld   a, (bc)
+        ld   d, a
+        inc  bc
+
+        // ; Use index to retrieve Team Color from board
+        ld  hl, #(_gameinfo + 497)     // ; gameinfo.board[]
+        add  hl, de
+        ld   a, (hl)
+
+        // Add address/index to SCRN0 (map) in DE        
+        // ; Lower address of map / SCRN0 is 0x00, so just need to add upper byte
+        ld   l, a  // ; Save A
+        ld   a, #>(__SCRN0)
+        add  a, d
+        ld   d, a
+        ld   a, l  // ; restore A
+
+        // ; team color in A, vram address in DE
+        call    _set_vram_byte
+
+        // ; Reload board array counter
+        pop af
+
+        jr  .queue_loop
+    __endasm;
+}
