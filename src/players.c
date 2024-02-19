@@ -176,7 +176,7 @@ inline uint8_t players_check_wall_collisions(uint8_t collisions, player_t * p_pl
 
         // Clamp values so later array lookups aren't garbage
         // Left edge wraparound will be higher, otherwise it's Right edge
-        if (p_player->next_x.h > PLAYER_MAX_X_U8 + 8)
+        if (p_player->next_x.h > PLAYER_MAX_X_U8 + BOARD_GRID_SZ)
             p_player->next_x.w = 0;
         else
             p_player->next_x.w = PLAYER_MAX_X_U8 << 8;
@@ -190,7 +190,7 @@ inline uint8_t players_check_wall_collisions(uint8_t collisions, player_t * p_pl
 
         // Clamp values so later array lookups aren't garbage
         // Left edge wraparound will be higher, otherwise it's Right edge
-        if (p_player->next_y.h > PLAYER_MAX_Y_U8 + 8)
+        if (p_player->next_y.h > PLAYER_MAX_Y_U8 + BOARD_GRID_SZ)
             p_player->next_y.w = 0;
         else
             p_player->next_y.w = PLAYER_MAX_Y_U8 << 8;
@@ -307,8 +307,8 @@ void players_update(void) {
         uint16_t idx;
         while (g_board_update_count_cur_player != g_board_update_count) {
             idx = board_update_queue[g_board_update_count_cur_player++];
-            // if (idx > ((BOARD_BUF_W * BOARD_DISP_H) + BOARD_DISP_W)) {
-            //     EMU_printf("Overflow Warning num=%d idx=%d > 596, x=%d (%d), y=%d (%d): NX x=%d (%d), y=%d (%d)\n",
+            // if (idx >= (BOARD_BUF_W * BOARD_DISP_H)) {
+            //     EMU_printf("Overflow Warning num=%d idx=%d >= 576, x=%d (%d), y=%d (%d): NX x=%d (%d), y=%d (%d)\n",
             //         c, idx,
             //         p_player->x.h, p_player->x.h / 8, p_player->y.h, p_player->y.h / 8,
             //         p_player->next_x.h, p_player->next_x.h / 8, p_player->next_y.h, p_player->next_y.h / 8);
@@ -403,7 +403,6 @@ static void players_draw_board_moat(void) {
 // Initialize the players in a ring
 void players_init_circle(void) {
 
-    uint8_t * p_board = gameinfo.board;
     uint8_t angle_step = 256u / gameinfo.player_count;
 
 
@@ -436,7 +435,6 @@ void players_init_radiate_from_groups(void) {
 // Optionally pairs with: board_init_grid_for_all_sizes()
 static void players_init_grid(uint8_t player_count_idx) {
 
-    uint8_t * p_board = gameinfo.board;
     uint8_t team;
 
     const uint8_t divs_x = players_divs_x[player_count_idx];

@@ -26,7 +26,6 @@ void board_set_tile(int8_t board_x, int8_t board_y, uint8_t team) {
 // Pairs with: players_reset_grid_for_all_sizes()
 static void board_init_grid_for_all_sizes(uint8_t player_count_idx) {
 
-    uint8_t * p_board = gameinfo.board;
     uint8_t team_color;
 
     const uint8_t divs_x = board_divs_x[player_count_idx];
@@ -48,7 +47,10 @@ static void board_init_grid_for_all_sizes(uint8_t player_count_idx) {
             for (area_y = (y * step_y); area_y < ((y + 1u) * step_y); area_y += 1u << 8) {
                 for (area_x = (x * step_x); area_x < ((x + 1u) * step_x); area_x+= 1u << 8) {
 
-                    gameinfo.board[(area_x >> 8) + ((area_y >> 8) * BOARD_BUF_W)] = team_color; //(team & PLAYER_TEAMS_MASK);
+                    if ((area_x >> 8) > BOARD_DISP_W) continue;
+                    if ((area_y >> 8) > BOARD_DISP_H) continue;
+
+                    gameinfo.board[ BOARD_INDEX((area_x >> 8),(area_y >> 8)) ] = team_color; //(team & PLAYER_TEAMS_MASK);
                 }
             }
         }
