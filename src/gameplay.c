@@ -1,6 +1,6 @@
 #include <gbdk/platform.h>
 #include <gbdk/metasprites.h>
-#include <gbdk/emu_debug.h>
+// #include <gbdk/emu_debug.h>
 #include <rand.h>
 
 #include "common.h"

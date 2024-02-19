@@ -1,5 +1,5 @@
 #include <gbdk/platform.h>
-#include <gbdk/emu_debug.h>
+// #include <gbdk/emu_debug.h>
 #include <stdint.h>
 #include <stdbool.h>
 

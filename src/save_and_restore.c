@@ -1,7 +1,7 @@
 #include <gbdk/platform.h>
 #include <string.h>
 #include <stdint.h>
-#include <gbdk/emu_debug.h>
+// #include <gbdk/emu_debug.h>
 #include <stdbool.h>
 #include <rand.h>
 
