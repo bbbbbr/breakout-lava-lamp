@@ -20,10 +20,14 @@
 #define SPEED_DEFAULT   SPEED_SLOW
 #define PLAYERS_DEFAULT PLAYERS_4
 
+#define SETTING_VALUE_NOT_FOUND 0xFFu
 
 
 void title_init(void);
 void title_run(void);
+
+uint8_t settings_get_setting_index(const uint8_t setting_type);
+
 
 #endif // _TITLE_SCREEN_H
 

@@ -9,6 +9,7 @@
 #include "math_util.h"
 #include "save_and_restore.h"
 
+#include "title_screen.h"
 #include "gameboard.h"
 #include "players_asm.h"
 
@@ -17,6 +18,20 @@
 // offset to center the 8X8 circle sprite on the x,y coordinate
 #define SPR_OFFSET_X (DEVICE_SPRITE_PX_OFFSET_X)
 #define SPR_OFFSET_Y (DEVICE_SPRITE_PX_OFFSET_Y)
+
+
+// // 2x2 board layout with players at opposite angles
+// const uint8_t player_init_2x2_X[PLAYER_TEAMS_COUNT] = {
+//      (SCREENWIDTH / 4u) * 1u, (SCREENWIDTH / 4u) * 3u,
+//      (SCREENWIDTH / 4u) * 1u, (SCREENWIDTH / 4u) * 3u };
+
+// const uint8_t player_init_2x2_Y[PLAYER_TEAMS_COUNT] = {
+//      (SCREENHEIGHT / 4) * 1, (SCREENHEIGHT / 4) * 1,
+//      (SCREENHEIGHT / 4) * 3, (SCREENHEIGHT / 4) * 3 };
+
+const uint8_t player_init_2x2_Angle[PLAYER_TEAMS_COUNT] = {
+    ANGLE_TO_8BIT(45u), ANGLE_TO_8BIT(135u),
+    ANGLE_TO_8BIT(315u), ANGLE_TO_8BIT(225u) };
 
 
 
@@ -48,6 +63,7 @@ uint8_t g_collisions;
 #define CHECK_BOARD_SPAN_2_TILES(pixel_loc) (pixel_loc & 0x07u)
 
 
+
 void players_redraw_sprites_asm(void) NAKED PRESERVES_REGS(a, b, c, d, e, h, l) {
       __asm \
 
@@ -55,7 +71,7 @@ void players_redraw_sprites_asm(void) NAKED PRESERVES_REGS(a, b, c, d, e, h, l) 
     _GINFO_OFSET_PLAYERS      = 17 // ; start of (player_t) .players[N]
     // ; Offset indexes into the player struct
     _PLAYER_TYPE_Y_HI_OFFSET      = 2 // ; .y.h
-    _PLAYER_TYPE_X_HI_OFFSET      = 8 // ; .x.h
+    _PLAYER_TYPE_X_HI_OFFSET      = 8 // ; .x.h  // This relies on even distance between paired X/Y vars in the struct in each direction
 
 
     _PLAYER_TYPE_Y_TO_X_INCR      = (_PLAYER_TYPE_X_HI_OFFSET - _PLAYER_TYPE_Y_HI_OFFSET)
@@ -137,9 +153,9 @@ void players_redraw_sprites(void) {
 void player_recalc_movement(uint8_t idx) {
     uint8_t t_angle = gameinfo.players[idx].angle;
 
-    gameinfo.players[idx].speed_x = (int16_t)SIN(t_angle);
+    gameinfo.players[idx].speed_x = (int16_t)SIN_PREMULT(t_angle);
     // Flip Y direction since adding positive values moves further down the screen
-    gameinfo.players[idx].speed_y = (int16_t)COS(t_angle) * -1;
+    gameinfo.players[idx].speed_y = (int16_t)COS_PREMULT(t_angle) * -1;
 }
 
 
@@ -292,7 +308,7 @@ void players_update(void) {
         while (g_board_update_count_cur_player != g_board_update_count) {
             idx = board_update_queue[g_board_update_count_cur_player++];
             // if (idx > ((BOARD_BUF_W * BOARD_DISP_H) + BOARD_DISP_W)) {
-            //     EMU_printf("num=%d idx=%d > 596, x=%d (%d), y=%d (%d): NX x=%d (%d), y=%d (%d)\n",
+            //     EMU_printf("Overflow Warning num=%d idx=%d > 596, x=%d (%d), y=%d (%d): NX x=%d (%d), y=%d (%d)\n",
             //         c, idx, 
             //         p_player->x.h, p_player->x.h / 8, p_player->y.h, p_player->y.h / 8,
             //         p_player->next_x.h, p_player->next_x.h / 8, p_player->next_y.h, p_player->next_y.h / 8);
@@ -323,9 +339,9 @@ void players_update(void) {
             p_player->angle = angle = (uint8_t)(angle + (int8_t)(rand() & 0x03u) - 1);
 
             // // Recalc player  movement
-            p_player->speed_x = (int16_t)SIN(angle);
+            p_player->speed_x = (int16_t)SIN_PREMULT(angle);
             // Flip Y direction since adding positive values moves further down the screen
-            p_player->speed_y = (int16_t)COS(angle) * -1;
+            p_player->speed_y = (int16_t)COS_PREMULT(angle) * -1;
         } else {
             // Otherwise update position to new location
             p_player->x.w = p_player->next_x.w;
@@ -349,73 +365,151 @@ void players_apply_queued_vram_updates(void) {
 
 /////////////////////////////////////////////////////////////////////////////
 
+/*
+// OPTIONAL: player distribution aproaches that didn't make the cut
 
-// 2x2 board layout with players at opposite angles
-const uint8_t player_init_2x2_X[PLAYER_TEAMS_COUNT] = {
-     (SCREENWIDTH / 4u) * 1u, (SCREENWIDTH / 4u) * 3u,
-     (SCREENWIDTH / 4u) * 1u, (SCREENWIDTH / 4u) * 3u };
 
-const uint8_t player_init_2x2_Y[PLAYER_TEAMS_COUNT] = {
-     (SCREENHEIGHT / 4) * 1, (SCREENHEIGHT / 4) * 1,
-     (SCREENHEIGHT / 4) * 3, (SCREENHEIGHT / 4) * 3 };
+// Initialize the players in a ring
+void players_init_circle(void) {
 
-const uint8_t player_init_2x2_Angle[PLAYER_TEAMS_COUNT] = {
-    ANGLE_TO_8BIT(45u), ANGLE_TO_8BIT(135u),
-    ANGLE_TO_8BIT(315u), ANGLE_TO_8BIT(225u) };
+    uint8_t * p_board = gameinfo.board;
+    uint8_t angle_step = 256u / gameinfo.player_count;
+
+
+    for (uint8_t c = 0u; c < gameinfo.player_count; c++) {
+        gameinfo.players[c].x.h = (uint8_t)((SIN(c * angle_step) * ((SCREENWIDTH  / 4) + (rand() & 0x1Fu))) >> 7) + (SCREENWIDTH / 2);
+        gameinfo.players[c].y.h = (uint8_t)((COS(c * angle_step) * ((SCREENHEIGHT / 4) + (rand() & 0x1Fu))) >> 7) + (SCREENHEIGHT / 2);
+    }
+}
+
+
+// Initialize players into 4 team locations, but with random angle 
+// so they radiate out from the center of each group on startup
+void players_init_radiate_from_groups(void) {
+
+    for(uint8_t c = 0; c < PLAYER_COUNT_MAX; c++) {
+        // Looks better initially but less interesting thereafter due to pre-grouping
+        // Probable solution: On first bounce switch to whatever color they touch or Random, if a wall then no change.
+        // But that's not as easy now that team number is hard-wired as a mask of player index number
+        
+        // Match team locations for players 1-4, but with random angle
+        gameinfo.players[c].x.w   = gameinfo.players[c & PLAYER_TEAMS_MASK].x.w;
+        gameinfo.players[c].y.w   = gameinfo.players[c & PLAYER_TEAMS_MASK].y.w;
+        gameinfo.players[c].angle = rand();
+    }
+}
+*/
+
+
+// Initialize the players as a grid always divided to match the number of players
+// Optionally pairs with: board_init_grid_for_all_sizes()
+static void players_init_grid(uint8_t player_count_idx) {
+
+    uint8_t * p_board = gameinfo.board;
+    uint8_t team;
+
+    const uint8_t divs_x = players_divs_x[player_count_idx];
+    const uint8_t divs_y = players_divs_y[player_count_idx];
+
+    // Fixed point calc for widths to deal with cases where board width isn't evenly divisible
+    const uint16_t step_x = (BOARD_DISP_W << 8) / (uint16_t)divs_x;
+    const uint16_t step_y = (BOARD_DISP_H << 8) / (uint16_t)divs_y;
+
+    // Divide the board into NxN regions, fill each region with a given team's color
+    for (uint16_t y = 0; y < divs_y; y++) {
+        for (uint16_t x = 0; x < divs_x; x++) {
+
+            // Repeating 2x2 grid of 4 different colors
+            team = (x & 0x01u) + ((y & 0x01u) * 2u);
+
+            // Player assignment is on a repeating 2x2 meta grid, left->right, top->bottom
+            // X offset for grid: (2 columns and 2 rows) of x for each row of 2x2 groups: (x/2u) * 4u
+            // Y offset for grid: Max x offset per full rows of 2x2: (divs_x / 2) * 4u) multiplied by y / 2u for every 2 rows
+            uint8_t player_idx = team + ((x / 2u) * 4u) +
+                                               ((y / 2u) * ((divs_x / 2u) * 4u));
+            gameinfo.players[player_idx].x.w   = (((x * step_x) + (step_x / 2)) * 8) - ((SPRITE_WIDTH / 2) << 8);
+            gameinfo.players[player_idx].y.w   = (((y * step_y) + (step_y / 2)) * 8) - ((SPRITE_HEIGHT / 2) << 8);
+            gameinfo.players[player_idx].angle = player_init_2x2_Angle[team];
+        }
+    }
+}
+
+
+#define EDGE_BORDER_SZ     (04u)
+#define EDGE_BORDER_2x_SZ  (EDGE_BORDER_SZ * 2u)
+#define NEAR_MASK (~0x0Fu) // Within 7 // 15 pixels
+
+#define PLAYER_RANDOM_X() (((rand() % (PLAYER_RANGE_X_U8 - EDGE_BORDER_2x_SZ)) + PLAYER_MIN_X_U8 + EDGE_BORDER_SZ) << 8u)
+#define PLAYER_RANDOM_Y() (((rand() % (PLAYER_RANGE_Y_U8 - EDGE_BORDER_2x_SZ)) + PLAYER_MIN_Y_U8 + EDGE_BORDER_SZ) << 8u)
+
+#define DECLUMP_PASS_1  1u
+#define DECLUMP_PASS_LIMIT  3u
+
+static bool player_declump(uint8_t player_idx, uint8_t player_idx_max) { // , uint8_t pass_num) {
+
+    bool relocated = false;
+
+    for (uint8_t c = 0u; c < player_idx_max; c++) {
+
+        if ( ((gameinfo.players[player_idx].x.h & NEAR_MASK) == (gameinfo.players[c].x.h & NEAR_MASK))
+             && ((gameinfo.players[player_idx].y.h & NEAR_MASK) == (gameinfo.players[c].y.h & NEAR_MASK))) {
+
+            gameinfo.players[player_idx].x.w   = PLAYER_RANDOM_X();
+            gameinfo.players[player_idx].y.w   = PLAYER_RANDOM_Y();
+            gameinfo.players[player_idx].angle = 0x7Fu - gameinfo.players[c].angle;
+            relocated = true;
+        }
+    }
+    return relocated;
+}
+
+
+// Init players to random locations and angles
+// More interesting to watch over time, but less appealing at the start
+// due to looking chatoic on random team bg colors
+static void players_init_random(void) {
+
+    for(uint8_t c = 0; c < PLAYER_COUNT_MAX; c++) {
+
+        gameinfo.players[c].angle = (uint8_t)rand();
+        gameinfo.players[c].x.w   = PLAYER_RANDOM_X();
+        gameinfo.players[c].y.w   = PLAYER_RANDOM_Y();
+
+        if (c > 0) {
+            // Short two pass to try to prevent overlap of balls at random locations
+            if (player_declump(c, c - 1u))
+                player_declump(c, c - 1u);
+        }
+    }
+
+}
 
 
 void players_reset(void) {
 
-    uint8_t c;
+    uint8_t player_count_idx = settings_get_setting_index(MENU_PLAYERS);
 
-    // Always start with 2 x 2 layout
-    for (c = 0; c < PLAYER_TEAMS_COUNT; c++) {
-        gameinfo.players[c].x.h   = player_init_2x2_X[c];
-        gameinfo.players[c].y.h   = player_init_2x2_Y[c];
-        gameinfo.players[c].angle = player_init_2x2_Angle[c];
+    // First always do an init with max num players so that they get initialized
+    // and don't all show up at 0,0 if the user increases player count during gameplay
+    players_init_random();
+
+    // For alternate grid sizing, cap max grid sizing at 4 player setup
+    if (!(KEY_PRESSED(BUTTON_SELECT_INIT_ALTERNATE))) {
+        // Then initialize with the number that will actually be displayed on
+        // starting if it's not the alternate mode
+        players_init_grid(player_count_idx);
     }
 
-    // Override first two if 2 x 1 layout
+    // Special case for the minimal player count to look better:
+    // Override 2x1
     if (gameinfo.player_count == PLAYERS_2_VAL) {
-        gameinfo.players[0].x.h = (SCREENWIDTH / 4) * 1;
-        gameinfo.players[1].x.h = (SCREENWIDTH / 4) * 3;
-        // Centered on Y
-        gameinfo.players[0].y.h = (SCREENHEIGHT / 2);
-        gameinfo.players[1].y.h = (SCREENHEIGHT / 2);
-
         // Give players opposite angles
         gameinfo.players[0].angle = ANGLE_TO_8BIT(45u);
         gameinfo.players[1].angle = ANGLE_TO_8BIT(225u);
     }
 
-    // Reset all player state vars
-    for(uint8_t c = 0; c < PLAYER_COUNT_MAX; c++) {
+    // Don't need to initialize player next x/y since 
+    // that happens on update for each frame 
 
-        // Fill in any remaining player balls that weren't initialized above
-        if (c >= PLAYER_TEAMS_COUNT) {
-            // TODO: use algorithmic distribution with matching grid setup, alternating smaller X/Y division of regions per power of 2
-
-            // More interesting to watch, but initially ugly due to being on random bg team colors, could fix up bg colors
-            //
-            // Random location roughly within board grid with angle opposite to same on team
-            gameinfo.players[c].angle = player_init_2x2_Angle[c]; //(c & PLAYER_TEAMS_MASK) ^ PLAYER_TEAMS_MASK];
-            // gameinfo.players[c].angle = rand();
-            gameinfo.players[c].x.w   = (((rand() % PLAYER_RANGE_X_U8) + PLAYER_MIN_X_U8) << 8u);
-            gameinfo.players[c].y.w   = (((rand() % PLAYER_RANGE_Y_U8) + PLAYER_MIN_Y_U8) << 8u);
-
-            // Looks better initially but less interesting thereafter due to pre-clumping
-            //
-            // Match team locations for players 1-4, but with random angle
-            // gameinfo.players[c].x.w   = gameinfo.players[c & PLAYER_TEAMS_MASK].x.w;
-            // gameinfo.players[c].y.w   = gameinfo.players[c & PLAYER_TEAMS_MASK].y.w;
-            // gameinfo.players[c].angle = rand();
-        }
-
-        gameinfo.players[c].next_x = gameinfo.players[c].x;
-        gameinfo.players[c].next_y = gameinfo.players[c].y;
-        // This will get recalculated when players_all_recalc_movement() is called before starting
-        gameinfo.players[c].speed_x = gameinfo.players[c].speed_y = 0u;
-        // Clear low byte of x/y position
-        gameinfo.players[c].x.l = gameinfo.players[c].y.l = 0u;
-    }
+    players_all_recalc_movement();
 }

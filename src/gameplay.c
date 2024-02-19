@@ -1,6 +1,6 @@
 #include <gbdk/platform.h>
 #include <gbdk/metasprites.h>
-// #include <gbdk/emu_debug.h>
+#include <gbdk/emu_debug.h>
 #include <rand.h>
 
 #include "common.h"
@@ -69,6 +69,8 @@ static void handle_dpad_options(uint8_t keys_ticked) {
 // Expects Board and Players to have been initialized
 void game_init(void) {
 
+    UPDATE_KEYS();
+
     // Select current speed*sine table
     sine_table_select(gameinfo.speed);
 
@@ -76,7 +78,16 @@ void game_init(void) {
     if ((gameinfo.is_initialized == false) || (gameinfo.action != ACTION_CONTINUE_VAL)) {
         gameinfo.is_initialized = true;
         gameinfo.sprites_enabled = true;
+
+        if (gameinfo.action == ACTION_RANDOM_VAL) {
+            initrand(gameinfo.user_rand_seed.w);
+        } else {
+            initrand(RAND_SEED_STANDARD);
+        }
+
+        // Reset board before players since players init may alter board
         board_reset();
+        players_reset();
     }
 
     board_init_gfx();
@@ -134,10 +145,11 @@ void game_run(void) {
         }
         else if (keys_ticked & (J_START)) {
             // Toggle pause, make a save if entering paused state
-            // TODO: Consider making it part of saved global game state/settings
+            // (Intentionally not part of global game state/settings)
             paused = !paused;
-            if (paused)
+            if (paused) {
                 savedata_save();
+            }
         }
 
 
@@ -185,16 +197,5 @@ void game_run(void) {
             SHOW_SPRITES;
             gameinfo.enable_sprites_next_frame = false;
         }
-
-        #ifdef FEATURE_AUTO_SAVE
-            // Save game state periodically
-            // Disabled since this can cause a big cpu spike per frame due to large memcopy.
-            // Instead rely on the sace during pause / return to menu and remove this
-            save_counter++;
-            if (save_counter >= SAVE_FRAMES_THRESHOLD) {
-                save_counter = 0u;
-                savedata_save();
-            }
-        #endif
     }
 }

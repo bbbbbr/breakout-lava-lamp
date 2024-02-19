@@ -35,7 +35,8 @@ Actions:
 
 Controls:
 - D-Pad: Moves cursor on title screen
-- Start/A/B: Exits Title Screen
+- Start/A/B: Continue or Start
+  - B kept held down when starting: Random ball layout instead of grid
 
 ### During Game Board Updates
 Controls:

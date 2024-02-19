@@ -16,6 +16,10 @@
 
 #define ARRAY_LEN(A)  sizeof(A) / sizeof(A[0])
 
+#define BUTTON_SELECT_INIT_ALTERNATE (J_B)
+
+
+
 // #define STATE_SHOWSPLASH  1u
 #define STATE_SHOWTITLE   0u
 #define STATE_RUNGAME     1u
@@ -27,17 +31,17 @@
 #define PLAYER_TEAMS_COUNT   4u    // 4 teams with different colors
 #define PLAYER_TEAMS_MASK 0x03u // Bitmask for reducing counters down to a member of a given team
 
-#define ACTION_CONTINUE    0u
-#define ACTION_STD_RANDOM  1u
-#define ACTION_RANDOM      2u
+#define ACTION_CONTINUE_IDX    0u
+#define ACTION_STD_RANDOM_IDX  1u
+#define ACTION_RANDOM_IDX      2u
     #define ACTION_CONTINUE_VAL    0u
     #define ACTION_STD_RANDOM_VAL  1u
     #define ACTION_RANDOM_VAL      2u
 
-#define SPEED_SLOWEST  0u
-#define SPEED_SLOW     1u
-#define SPEED_FAST     2u
-#define SPEED_FASTEST  3u
+#define SPEED_SLOWEST_IDX  0u
+#define SPEED_SLOW_IDX     1u
+#define SPEED_FAST_IDX     2u
+#define SPEED_FASTEST_IDX  3u
     // Player position is in Fixed 8.8, speed is signed 8 bit
     // Speed gets multiplied by signed 8 bit angle value where max is 127
     // so resulting max neg and pos speed is about (127 * N), so nearly (N << 7) 
@@ -51,11 +55,13 @@
     #define SPEED_MAX (SPEED_FASTEST_VAL)
 
 
-#define PLAYERS_2      0u
-#define PLAYERS_4      1u
-#define PLAYERS_8      2u
-#define PLAYERS_16     3u
-#define PLAYERS_32     4u
+#define PLAYERS_2_IDX      0u
+#define PLAYERS_4_IDX      1u
+#define PLAYERS_8_IDX      2u
+#define PLAYERS_16_IDX     3u
+#define PLAYERS_32_IDX     4u
+
+#define PLAYERS_MAX_IDX     (PLAYERS_32_IDX)
     #define PLAYERS_2_VAL      2u
     #define PLAYERS_4_VAL      4u
     #define PLAYERS_8_VAL      8u
@@ -162,10 +168,13 @@ typedef struct gameinfo_t {
 extern gameinfo_t gameinfo;
 extern uint8_t vsync_count;
 
-// Old method, look up color based on team (now just use player id directly)
-//
-// extern const uint8_t board_team_bg_colors[PLAYER_TEAMS_COUNT];
 extern const uint8_t player_sprite_colors[PLAYER_TEAMS_COUNT];
+
+extern const uint8_t players_divs_x[];
+extern const uint8_t players_divs_y[];
+extern const uint8_t board_divs_x[];
+extern const uint8_t board_divs_y[];
+
 
 
 #endif // _COMMON_H

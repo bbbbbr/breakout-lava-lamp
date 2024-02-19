@@ -11,6 +11,7 @@ void player_check_wall_collisions(uint8_t player_id);
 void players_update(void);
 void players_apply_queued_vram_updates(void);
 
+void players_reset_grid_for_all_sizes(void);
 void players_reset(void);
 
 #endif // __PLAYERS_H

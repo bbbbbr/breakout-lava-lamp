@@ -1,6 +1,7 @@
 #include <gbdk/platform.h>
 #include <string.h>
 #include <stdint.h>
+#include <gbdk/emu_debug.h>
 #include <stdbool.h>
 #include <rand.h>
 
@@ -34,16 +35,20 @@ void savedata_reset(void) {
     gameinfo.save_check0 = SAVEDATA_SIG_CHECK_0;
     gameinfo.save_check1 = SAVEDATA_SIG_CHECK_1;
     gameinfo.save_version = SAVE_VERSION_NUM;
-    gameinfo.sprites_enabled = true;
+
 
     // Power-on defaults
-    gameinfo.is_initialized = false;
 
-    gameinfo.action       = ACTION_CONTINUE_VAL;
-    gameinfo.speed        = SPEED_SLOW_VAL;
     gameinfo.player_count = PLAYERS_4_VAL;
     gameinfo.player_count_last = gameinfo.player_count;
+    gameinfo.speed        = SPEED_SLOW_VAL;
+    gameinfo.action       = ACTION_CONTINUE_VAL;
 
+    gameinfo.sprites_enabled = true;
+    gameinfo.enable_sprites_next_frame = false;
+    gameinfo.is_initialized = false;
+    gameinfo.user_rand_seed.w = 0x0000u;
+    gameinfo.system_rand_seed_saved = 0x1234u;
 
     // Update checksum: needs to happen after all other save data is initialized above
     gameinfo.save_checksum = savedata_calc_checksum();

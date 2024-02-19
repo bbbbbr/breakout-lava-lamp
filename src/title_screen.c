@@ -49,27 +49,49 @@ const uint8_t cursor_max[3] = {ARRAY_LEN(cursors_action_x)  - 1u,
 uint8_t cursors_selected[3];
 
 
-static void settings_load(void) {
-    uint8_t c;
+uint8_t settings_get_setting_index(const uint8_t setting_type) {
 
+    if (setting_type <= MENU_MAX) {
+
+        for (uint8_t c = 0; c <= cursor_max[setting_type]; c++) {
+            switch (setting_type) {
+            case MENU_ACTION:
+                if (action_values[c] == gameinfo.action) {
+                    return c; // Success, return index
+                }
+
+            case MENU_SPEED:
+                if (speed_values[c] == gameinfo.speed) {
+                    return c; // Success, return index
+                }
+
+            case MENU_PLAYERS:
+                if (player_values[c] == gameinfo.player_count) {
+                    return c; // Success, return index
+                }
+            }
+        }
+    }
+    return SETTING_VALUE_NOT_FOUND;
+}
+
+
+static void settings_load(void) {
+    uint8_t result;
+
+    // Set default cursor
     current_cursor = MENU_DEFAULT;
 
-    for (c=0; c <= cursor_max[MENU_ACTION]; c++) {
-        if (action_values[c] == gameinfo.action)
-            cursors_selected[MENU_ACTION] = c;
-    }
+    result = settings_get_setting_index(MENU_ACTION);
+    if (result != SETTING_VALUE_NOT_FOUND) cursors_selected[MENU_ACTION] = result;
 
-    for (c=0; c <= cursor_max[MENU_SPEED]; c++) {
-        if (speed_values[c] == gameinfo.speed)
-            cursors_selected[MENU_SPEED] = c;
-    }
+    result = settings_get_setting_index(MENU_SPEED);
+    if (result != SETTING_VALUE_NOT_FOUND) cursors_selected[MENU_SPEED] = result;
 
-    for (c=0; c <= cursor_max[MENU_PLAYERS]; c++) {
-        if (player_values[c] == gameinfo.player_count)
-            cursors_selected[MENU_PLAYERS] = c;
-    }
-
+    result = settings_get_setting_index(MENU_PLAYERS);
+    if (result != SETTING_VALUE_NOT_FOUND) cursors_selected[MENU_PLAYERS] = result;
 }
+
 
 static void settings_apply(void) {
     gameinfo.action       = action_values[ cursors_selected[MENU_ACTION]  ];
@@ -180,7 +202,6 @@ void title_run(void) {
             gameinfo.user_rand_seed.h = DIV_REG;
 
             settings_apply();
-            // Sample div reg
             return;
         }
 
