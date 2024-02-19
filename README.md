@@ -45,8 +45,8 @@ Controls:
   - Runs faster while long-pressed
   - Toggles player balls on/off when short-tapped
 - Start: Pause/Un-Pause
-- Left/Right: Increases/Decreases speed
-- Up/Down: Decreases/Increases number of player balls
+- Left/Right: Increase / Decreases speed
+- Up/Down: Increase / Decrease number of player balls
 
 
 ### Building
