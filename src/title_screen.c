@@ -1,4 +1,5 @@
 #include <gbdk/platform.h>
+#include <gbdk/emu_debug.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -52,23 +53,26 @@ uint8_t cursors_selected[3];
 uint8_t settings_get_setting_index(const uint8_t setting_type) {
 
     if (setting_type <= MENU_MAX) {
-
         for (uint8_t c = 0; c <= cursor_max[setting_type]; c++) {
+
             switch (setting_type) {
-            case MENU_ACTION:
-                if (action_values[c] == gameinfo.action) {
-                    return c; // Success, return index
-                }
+                case MENU_ACTION:
+                    if (action_values[c] == gameinfo.action) {
+                        return c; // Success, return index
+                    }
+                    break;
 
-            case MENU_SPEED:
-                if (speed_values[c] == gameinfo.speed) {
-                    return c; // Success, return index
-                }
+                case MENU_SPEED:
+                    if (speed_values[c] == gameinfo.speed) {
+                        return c; // Success, return index
+                    }
+                    break;
 
-            case MENU_PLAYERS:
-                if (player_values[c] == gameinfo.player_count) {
-                    return c; // Success, return index
-                }
+                case MENU_PLAYERS:
+                    if (player_values[c] == gameinfo.player_count) {
+                        return c; // Success, return index
+                    }
+                    break;
             }
         }
     }
