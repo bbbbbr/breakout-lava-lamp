@@ -85,6 +85,8 @@
 #define BOARD_DISP_H (DEVICE_SCREEN_HEIGHT)
 
 
+#define BOARD_INDEX(board_x, board_y) ((board_x) + (board_y * BOARD_BUF_W))
+
 #define BOARD_GRID_SZ 8u
 
 // Min/Max are screen borders less sprite width

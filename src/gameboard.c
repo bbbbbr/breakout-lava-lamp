@@ -14,6 +14,14 @@
 #include "players.h"
 
 
+void board_set_tile(int8_t board_x, int8_t board_y, uint8_t team) {
+    if ((uint8_t)board_x > BOARD_DISP_W) return;
+    if ((uint8_t)board_y > BOARD_DISP_H) return;
+
+    gameinfo.board[ BOARD_INDEX( ((uint16_t)board_x), ((uint16_t)board_y) ) ] = team;
+}
+
+
 // Initialize the game board as a grid always divided to match the number of players
 // Pairs with: players_reset_grid_for_all_sizes()
 static void board_init_grid_for_all_sizes(uint8_t player_count_idx) {

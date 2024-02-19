@@ -178,8 +178,8 @@ inline uint8_t players_check_wall_collisions(uint8_t collisions, player_t * p_pl
         // Left edge wraparound will be higher, otherwise it's Right edge
         if (p_player->next_x.h > PLAYER_MAX_X_U8 + 8)
             p_player->next_x.w = 0;
-        else 
-            p_player->next_x.w = PLAYER_MAX_X_U8 << 8;                
+        else
+            p_player->next_x.w = PLAYER_MAX_X_U8 << 8;
     }
     else
         collisions = COLLIDE_NONE;
@@ -192,7 +192,7 @@ inline uint8_t players_check_wall_collisions(uint8_t collisions, player_t * p_pl
         // Left edge wraparound will be higher, otherwise it's Right edge
         if (p_player->next_y.h > PLAYER_MAX_Y_U8 + 8)
             p_player->next_y.w = 0;
-        else 
+        else
             p_player->next_y.w = PLAYER_MAX_Y_U8 << 8;
     }
 
@@ -214,14 +214,14 @@ inline uint8_t players_check_board_collisions(uint8_t collisions, uint8_t player
 
     // Check Horizontal movement (New X & Current Y in order to avoid false triggers on Y)
     //
-    // WARNING: Something about the optimizer requires the dummy test, 
-    // otherwise players_update is ~40,000 cycles slower with 32 balls. 
+    // WARNING: Something about the optimizer requires the dummy test,
+    // otherwise players_update is ~40,000 cycles slower with 32 balls.
     if ((p_player->speed_x != 0) && (dummy_always_true)) {
 
         // Faster with the stack local vars instead of a compounded statement with index calc
         uint8_t test_next_x = (p_player->speed_x > 0) ? PLAYER_RIGHT(p_player->next_x.h) : PLAYER_LEFT(p_player->next_x.h);
         uint8_t test_y = PLAYER_TOP(p_player->y.h);
-        g_board_index = (test_next_x) + ((test_y) * BOARD_BUF_W);
+        g_board_index = BOARD_INDEX(test_next_x, test_y);
 
        if (gameinfo.board[g_board_index] != player_team_color) {
             // Don't update the board itself here since it needs to remain unmodified
@@ -243,14 +243,14 @@ inline uint8_t players_check_board_collisions(uint8_t collisions, uint8_t player
 
     // Check Vertical movement (New Y & Current X in order to avoid false triggers on X)
     //
-    // WARNING: Something about the optimizer requires the dummy test, 
-    // otherwise players_update is ~40,000 cycles slower with 32 balls. 
+    // WARNING: Something about the optimizer requires the dummy test,
+    // otherwise players_update is ~40,000 cycles slower with 32 balls.
     if ((p_player->speed_y != 0) && (dummy_always_true)) {
 
         uint8_t test_x = PLAYER_LEFT(p_player->x.h);
         uint8_t test_next_y = (p_player->speed_y > 0) ? PLAYER_BOTTOM(p_player->next_y.h) : PLAYER_TOP(p_player->next_y.h);
 
-        g_board_index = ( test_x) + (( test_next_y) * BOARD_BUF_W);
+        g_board_index = BOARD_INDEX(test_x,test_next_y);
 
        if (gameinfo.board[g_board_index] != player_team_color) {
             // Don't update the board itself here since it needs to remain unmodified
@@ -309,7 +309,7 @@ void players_update(void) {
             idx = board_update_queue[g_board_update_count_cur_player++];
             // if (idx > ((BOARD_BUF_W * BOARD_DISP_H) + BOARD_DISP_W)) {
             //     EMU_printf("Overflow Warning num=%d idx=%d > 596, x=%d (%d), y=%d (%d): NX x=%d (%d), y=%d (%d)\n",
-            //         c, idx, 
+            //         c, idx,
             //         p_player->x.h, p_player->x.h / 8, p_player->y.h, p_player->y.h / 8,
             //         p_player->next_x.h, p_player->next_x.h / 8, p_player->next_y.h, p_player->next_y.h / 8);
             // }
@@ -363,6 +363,37 @@ void players_apply_queued_vram_updates(void) {
     }
 }
 
+
+#define MOAT_SZ_PX (BOARD_GRID_SZ * 2)
+
+// Draw a somewhat imperfectly aligned moat around players
+// Used when players_init_random() is the initializer for player positions
+// to improve the initial board setup and make player balls less stuck
+static void players_draw_board_moat(void) {
+
+    for (uint8_t c = 0; c < gameinfo.player_count; c++) {
+
+        int8_t max_x = (int8_t)((gameinfo.players[c].x.h + SPRITE_WIDTH + MOAT_SZ_PX) / BOARD_GRID_SZ);
+        int8_t max_y = (int8_t)((gameinfo.players[c].y.h + SPRITE_HEIGHT + MOAT_SZ_PX) / BOARD_GRID_SZ);
+
+        int8_t min_x = (int8_t)((gameinfo.players[c].x.h - MOAT_SZ_PX) / BOARD_GRID_SZ);
+        int8_t min_y = (int8_t)((gameinfo.players[c].y.h - MOAT_SZ_PX) / BOARD_GRID_SZ);
+
+        uint8_t team = c & PLAYER_TEAMS_MASK;
+
+        for (int8_t board_y = min_y; board_y < max_y; board_y++) {
+            for (int8_t board_x = min_x; board_x < max_x; board_x++) {
+
+                // Clamp values so array lookups aren't garbage
+                // Unsigned wraparound will capture min and max
+                if ((uint8_t)board_x > BOARD_DISP_W) continue;
+                if ((uint8_t)board_y > BOARD_DISP_H) continue;
+                gameinfo.board[ BOARD_INDEX( ((uint16_t)board_x), ((uint16_t)board_y) ) ] = team;
+            }
+        }
+    }
+}
+
 /////////////////////////////////////////////////////////////////////////////
 
 /*
@@ -383,7 +414,7 @@ void players_init_circle(void) {
 }
 
 
-// Initialize players into 4 team locations, but with random angle 
+// Initialize players into 4 team locations, but with random angle
 // so they radiate out from the center of each group on startup
 void players_init_radiate_from_groups(void) {
 
@@ -391,7 +422,7 @@ void players_init_radiate_from_groups(void) {
         // Looks better initially but less interesting thereafter due to pre-grouping
         // Probable solution: On first bounce switch to whatever color they touch or Random, if a wall then no change.
         // But that's not as easy now that team number is hard-wired as a mask of player index number
-        
+
         // Match team locations for players 1-4, but with random angle
         gameinfo.players[c].x.w   = gameinfo.players[c & PLAYER_TEAMS_MASK].x.w;
         gameinfo.players[c].y.w   = gameinfo.players[c & PLAYER_TEAMS_MASK].y.w;
@@ -499,6 +530,11 @@ void players_reset(void) {
         // starting if it's not the alternate mode
         players_init_grid(player_count_idx);
     }
+    else {
+        // For random initial positions, add a moat around each player
+        // for better initial movement
+        players_draw_board_moat();
+    }
 
     // Special case for the minimal player count to look better:
     // Override 2x1
@@ -508,8 +544,8 @@ void players_reset(void) {
         gameinfo.players[1].angle = ANGLE_TO_8BIT(225u);
     }
 
-    // Don't need to initialize player next x/y since 
-    // that happens on update for each frame 
+    // Don't need to initialize player next x/y since
+    // that happens on update for each frame
 
     players_all_recalc_movement();
 }
