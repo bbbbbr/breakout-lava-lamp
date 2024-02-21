@@ -28,6 +28,8 @@ A: In order to make the outcome more interesting (and less symmetrical) the angl
 
 
 ### Title Screen Menu
+If no menu cursors or options are changed for about 1 minute then the game board will auto-start.
+
 Actions:
 - Continue: Resume the previous game board that was in progress
 - Standard: Start a new game board with the standard, fixed random seed value

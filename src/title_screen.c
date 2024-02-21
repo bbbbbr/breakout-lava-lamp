@@ -178,7 +178,12 @@ void title_init(void) {
 }
 
 
+#define IDLE_AUTO_START_THRESHOLD (1u * (60u *60u)) // 1 minutes * 60 seconds per minute * ~60 frames per second
+#define IDLE_RESET 0u;
+
 void title_run(void) {
+
+    uint16_t idle_count = 0;
 
     UPDATE_KEYS();
 
@@ -193,15 +198,21 @@ void title_run(void) {
     while (1) {
 
         UPDATE_KEYS();
+        idle_count++;
 
         if (KEY_TICKED(J_DPAD)) {
 
             // More first half of random init (updated with user moving around the menu)
+            // Reset idle counter if users presses any menu buttons
             gameinfo.user_rand_seed.l = DIV_REG;
+            idle_count = IDLE_RESET;
             cursors_update( GET_KEYS_TICKED(J_DPAD) );
         }
-        else if (KEY_TICKED(J_START | J_A | J_B)) {
+        else if ((KEY_TICKED(J_START | J_A | J_B)) ||
+                 (idle_count > IDLE_AUTO_START_THRESHOLD)) {
 
+            // Exit menu and start animation if user presses a given button
+            // or the idle counter crosses the threshold
             // Second half of random init (updated with user exiting the menu)
             gameinfo.user_rand_seed.h = DIV_REG;
 
